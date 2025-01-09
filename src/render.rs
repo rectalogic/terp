@@ -1,21 +1,16 @@
-use std::rc::Rc;
-
 use bevy::{color::palettes::basic::BLUE, input::mouse::MouseButtonInput, math::vec2, prelude::*};
 
-use crate::line2d::Line2d;
+use crate::linestrip2d::LineStrip2d;
 
 pub fn draw(mut gizmos: Gizmos) {
-    let curve = Rc::into_inner(
-        Line2d::new(vec![
-            vec2(50., 50.),
-            vec2(50., 60.),
-            vec2(60., 60.),
-            vec2(80., 70.),
-        ])
-        .points(),
-    )
-    .unwrap();
-    gizmos.linestrip_2d(curve, BLUE);
+    let points = LineStrip2d::new(vec![
+        vec2(50., 50.),
+        vec2(50., 60.),
+        vec2(60., 60.),
+        vec2(80., 70.),
+    ])
+    .points();
+    gizmos.linestrip_2d(points, BLUE);
 }
 
 pub fn handle_mouse(

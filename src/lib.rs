@@ -1,4 +1,4 @@
 pub mod app;
-pub mod line2d;
+pub mod linestrip2d;
 pub mod render;
 pub mod setup;

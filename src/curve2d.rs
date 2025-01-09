@@ -1,10 +1,10 @@
-use std::{rc::Rc, sync::Arc};
+use std::rc::Rc;
 
 use bevy::{asset::RenderAssetUsages, math::Vec2, prelude::*};
 
 #[derive(Clone)]
 pub struct Curve2d {
-    curve: Rc<dyn Curve<Vec2>>,
+    curve: Rc<SampleAutoCurve<Vec2>>,
 }
 
 impl Primitive2d for Curve2d {}
@@ -12,8 +12,15 @@ impl Primitive2d for Curve2d {}
 impl Curve2d {
     pub fn new(points: Vec<Vec2>) -> Self {
         Self {
-            curve: Rc::new(SampleAutoCurve::new(Interval::UNIT, points).expect("should be good")),
+            curve: Rc::new(
+                SampleAutoCurve::new(Interval::new(0., points.len() as f32).unwrap(), points)
+                    .expect("should be good"),
+            ),
         }
+    }
+
+    pub fn curve(self) -> Rc<SampleAutoCurve<Vec2>> {
+        self.curve.clone()
     }
 }
 
@@ -23,13 +30,19 @@ impl Meshable for Curve2d {
     fn mesh(&self) -> Self::Output {
         Self::Output {
             curve: Rc::clone(&self.curve),
-            segments: 32,
+            segments: self.curve.domain().length() as usize,
         }
     }
 }
 
+impl From<Curve2d> for Mesh {
+    fn from(value: Curve2d) -> Self {
+        value.mesh().into()
+    }
+}
+
 pub struct Curve2dMeshBuilder {
-    curve: Rc<dyn Curve<Vec2>>,
+    curve: Rc<SampleAutoCurve<Vec2>>,
     segments: usize,
 }
 
@@ -46,11 +59,9 @@ impl Curve2dBuilder for Curve2dMeshBuilder {
 
 impl MeshBuilder for Curve2dMeshBuilder {
     fn build(&self) -> Mesh {
-        // https://github.com/bevyengine/bevy/blob/main/examples/3d/lines.rs
-
         let points: Vec<Vec3> = self
             .curve
-            .sample_iter((0..=self.segments).map(|n| n as f32 / self.segments as f32))
+            .sample_iter(self.curve.domain().spaced_points(self.segments).unwrap())
             .filter_map(|p| p.map(|p| Vec3::from((p, 0.))))
             .collect();
         Mesh::new(

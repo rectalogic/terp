@@ -1,22 +1,22 @@
-use bevy::{
-    color::palettes::basic::RED,
-    input::mouse::{AccumulatedMouseMotion, MouseButtonInput},
-    math::vec2,
-    prelude::*,
-};
+use std::rc::Rc;
+
+use bevy::{color::palettes::basic::BLUE, input::mouse::MouseButtonInput, math::vec2, prelude::*};
+
+use crate::curve2d::Curve2d;
 
 pub fn draw(mut gizmos: Gizmos) {
-    let curve = SampleAutoCurve::new(
-        Interval::UNIT,
-        [
-            vec2(10., 10.),
-            vec2(10., 20.),
-            vec2(20., 20.),
-            vec2(40., 30.),
-        ],
+    let curve = Rc::into_inner(
+        Curve2d::new(vec![
+            vec2(50., 50.),
+            vec2(50., 60.),
+            vec2(60., 60.),
+            vec2(80., 70.),
+        ])
+        .curve(),
     )
-    .expect("should be good");
-    gizmos.curve_2d(curve, (0..=100).map(|n| n as f32 / 100.0), RED);
+    .unwrap();
+    let domain = curve.domain();
+    gizmos.curve_2d(curve, domain.spaced_points(100).unwrap(), BLUE);
 }
 
 pub fn handle_mouse(

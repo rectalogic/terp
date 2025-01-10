@@ -1,16 +1,28 @@
-use bevy::{color::palettes::basic::BLUE, input::mouse::MouseButtonInput, math::vec2, prelude::*};
+use bevy::{
+    color::palettes::basic::PURPLE, input::mouse::MouseButtonInput, math::vec2, prelude::*,
+};
 
 use crate::linestrip2d::LineStrip2d;
 
-pub fn draw(mut gizmos: Gizmos) {
-    let points = LineStrip2d::new(vec![
-        vec2(50., 50.),
-        vec2(50., 60.),
-        vec2(60., 60.),
-        vec2(80., 70.),
-    ])
-    .points();
-    gizmos.linestrip_2d(points, BLUE);
+pub fn draw(mut gizmos: Gizmos, lines: Query<(&LineStrip2d, &Name)>) {
+    let mut line1 = None;
+    let mut line2 = None;
+    for (line, name) in &lines {
+        match name.as_str() {
+            "line1" => {
+                line1 = Some(line);
+            }
+            "line2" => {
+                line2 = Some(line);
+            }
+            _ => {}
+        }
+    }
+    if let Some(line1) = line1 {
+        if let Some(line2) = line2 {
+            gizmos.linestrip_2d(line1.interpolate(line2, 0.1), PURPLE);
+        }
+    }
 }
 
 pub fn handle_mouse(

@@ -1,19 +1,26 @@
 use bevy::{
+    asset::RenderAssetUsages,
     color::palettes::basic::{BLUE, RED},
     math::vec2,
     prelude::*,
+    render::mesh::Indices,
+    sprite::Material2d,
 };
 
-use crate::linestrip2d::LineStrip2d;
+use crate::{
+    linestrip2d::LineStrip2d,
+    points::{PointsMaterial, PointsSettings},
+};
 
 pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut materials: ResMut<Assets<PointsMaterial>>,
 ) {
     // Camera
     commands.spawn(Camera2d);
 
+    /*
     let line1 = LineStrip2d::new(vec![
         vec2(10., -20.),
         vec2(10., 20.),
@@ -40,5 +47,35 @@ pub fn setup(
         line2,
         Mesh2d(meshes.add(mesh2)),
         MeshMaterial2d(materials.add(ColorMaterial::from_color(BLUE))),
+    ));
+    */
+
+    let vertices = vec![
+        Vec3::new(10., -30., 0.),
+        Vec3::new(-10., -30., 0.),
+        Vec3::new(-80., -90., 0.),
+        Vec3::new(-120., -40., 0.),
+    ];
+    let indices = Indices::U32(
+        (0u32..(vertices.len() as u32))
+            .flat_map(|i| [i, i, i])
+            .collect(),
+    );
+    let mut points = Mesh::new(
+        bevy::render::mesh::PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(), //XXX RENDER_WORLD?
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+    points.insert_indices(indices);
+    commands.spawn((
+        // Mesh2d(meshes.add(points)),
+        Mesh2d(meshes.add(points)),
+        MeshMaterial2d(materials.add(PointsMaterial {
+            settings: PointsSettings {
+                color: LinearRgba::BLUE,
+                point_radius: 10.,
+            },
+        })),
+        Transform::default(),
     ));
 }

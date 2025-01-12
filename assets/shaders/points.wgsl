@@ -21,10 +21,13 @@ struct PointsSettings {
 @group(2) @binding(0)
 var<uniform> settings: PointsSettings;
 
+// Offset Y so the center of the circle aligns with the incoming point
+// The unit square is 3r high, so radius is 1/3 and center in Y is 0.5
+const offset_y = 0.5 - (1.0 / 3.0);
 const triangle = array(
-    vec3f(0.0, 0.5, 0.0),   // top center
-    vec3f(-0.5, -0.5, 0.0), // bottom left
-    vec3f(0.5, -0.5, 0.0),  // bottom right
+    vec3f(0.0, 0.5 + offset_y, 0.0),   // top center
+    vec3f(-0.5, -0.5 + offset_y, 0.0), // bottom left
+    vec3f(0.5, -0.5 + offset_y, 0.0),  // bottom right
 );
 const uv = array(
     vec2f(0.5, 0.0),  // top center

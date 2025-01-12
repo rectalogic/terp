@@ -16,11 +16,11 @@ pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<PointsMaterial>>,
+    mut color_materials: ResMut<Assets<ColorMaterial>>,
 ) {
     // Camera
     commands.spawn(Camera2d);
 
-    /*
     let line1 = LineStrip2d::new(vec![
         vec2(10., -20.),
         vec2(10., 20.),
@@ -32,9 +32,9 @@ pub fn setup(
         Name::new("line1"),
         line1,
         Mesh2d(meshes.add(mesh1)),
-        MeshMaterial2d(materials.add(ColorMaterial::from_color(RED))),
+        MeshMaterial2d(color_materials.add(ColorMaterial::from_color(RED))),
     ));
-
+    /*
     let line2 = LineStrip2d::new(vec![
         vec2(10., -30.),
         vec2(-10., -30.),
@@ -51,21 +51,21 @@ pub fn setup(
     */
 
     let vertices = vec![
-        Vec3::new(10., -20., 0.),
-        Vec3::new(10., -20., 0.),
-        Vec3::new(10., -20., 0.),
-        Vec3::new(10., 20., 0.),
-        Vec3::new(10., 20., 0.),
-        Vec3::new(10., 20., 0.),
-        Vec3::new(80., 80., 0.),
-        Vec3::new(80., 80., 0.),
-        Vec3::new(80., 80., 0.),
-        Vec3::new(120., 30., 0.),
-        Vec3::new(120., 30., 0.),
-        Vec3::new(120., 30., 0.),
+        Vec3::new(10., -20., -1.),
+        Vec3::new(10., -20., -1.),
+        Vec3::new(10., -20., -1.),
+        Vec3::new(10., 20., -1.),
+        Vec3::new(10., 20., -1.),
+        Vec3::new(10., 20., -1.),
+        Vec3::new(80., 80., -1.),
+        Vec3::new(80., 80., -1.),
+        Vec3::new(80., 80., -1.),
+        Vec3::new(120., 30., -1.),
+        Vec3::new(120., 30., -1.),
+        Vec3::new(120., 30., -1.),
     ];
 
-    let mut points = Mesh::new(
+    let points = Mesh::new(
         bevy::render::mesh::PrimitiveTopology::TriangleList,
         RenderAssetUsages::default(), //XXX RENDER_WORLD?
     )

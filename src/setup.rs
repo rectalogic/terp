@@ -51,29 +51,49 @@ pub fn setup(
     */
 
     let vertices = vec![
-        Vec3::new(10., -30., 0.),
-        Vec3::new(-10., -30., 0.),
-        Vec3::new(-80., -90., 0.),
-        Vec3::new(-120., -40., 0.),
+        Vec3::new(10., -20., 0.),
+        Vec3::new(10., -20., 0.),
+        Vec3::new(10., -20., 0.),
+        Vec3::new(10., 20., 0.),
+        Vec3::new(10., 20., 0.),
+        Vec3::new(10., 20., 0.),
+        Vec3::new(80., 80., 0.),
+        Vec3::new(80., 80., 0.),
+        Vec3::new(80., 80., 0.),
+        Vec3::new(120., 30., 0.),
+        Vec3::new(120., 30., 0.),
+        Vec3::new(120., 30., 0.),
     ];
-    let indices = Indices::U32(
-        (0u32..(vertices.len() as u32))
-            .flat_map(|i| [i, i, i])
-            .collect(),
-    );
+
     let mut points = Mesh::new(
         bevy::render::mesh::PrimitiveTopology::TriangleList,
         RenderAssetUsages::default(), //XXX RENDER_WORLD?
     )
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
-    points.insert_indices(indices);
+
+    /*
+        let vertices = vec![
+            Vec3::new(0.0, 0.5, 0.0),   // top center
+            Vec3::new(-0.5, -0.5, 0.0), // bottom left
+            Vec3::new(0.5, -0.5, 0.0),  // bottom right
+            Vec3::new(0.5, 0.5, 0.0),   // top right
+        ];
+        let indices = Indices::U32(vec![0, 1, 2, 0, 3, 2]);
+        let mut points = Mesh::new(
+            bevy::render::mesh::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+        points.insert_indices(indices);
+    */
+
     commands.spawn((
         // Mesh2d(meshes.add(points)),
         Mesh2d(meshes.add(points)),
         MeshMaterial2d(materials.add(PointsMaterial {
             settings: PointsSettings {
                 color: LinearRgba::BLUE,
-                point_radius: 10.,
+                radius: 10.,
             },
         })),
         Transform::default(),

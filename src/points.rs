@@ -7,7 +7,7 @@ use bevy::{
 #[derive(Debug, Clone, Default, ShaderType)]
 pub struct PointsSettings {
     pub color: LinearRgba,
-    pub point_radius: f32,
+    pub radius: f32,
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]

@@ -1,54 +1,70 @@
-use bevy::{
-    color::palettes::basic::PURPLE, input::mouse::MouseButtonInput, math::vec2, prelude::*,
-};
+use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::linestrip2d::LineStrip2d;
+use crate::points::{Points, PointsMaterial, PointsSettings};
 
-pub fn draw(mut gizmos: Gizmos, lines: Query<(&LineStrip2d, &Name)>) {
-    let mut line1 = None;
-    let mut line2 = None;
-    for (line, name) in &lines {
-        match name.as_str() {
-            "line1" => {
-                line1 = Some(line);
-            }
-            "line2" => {
-                line2 = Some(line);
-            }
-            _ => {}
-        }
+#[derive(Component)]
+pub struct Drawing;
+
+fn window_to_world(
+    camera: &Camera,
+    camera_transform: &GlobalTransform,
+    window_position: Vec2,
+) -> Option<Vec2> {
+    if let Ok(point) = camera.viewport_to_world_2d(camera_transform, window_position) {
+        Some(point)
+    } else {
+        None
     }
-    if let Some(line1) = line1 {
-        if let Some(line2) = line2 {
-            gizmos.linestrip_2d(line1.interpolate(line2, 0.1), PURPLE);
+}
+
+pub fn start_drawing(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<PointsMaterial>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera_query: Single<(&Camera, &GlobalTransform)>,
+) {
+    let window = windows.single();
+    if let Some(window_position) = window.cursor_position() {
+        let (camera, camera_transform) = *camera_query;
+        if let Some(world_position) = window_to_world(camera, camera_transform, window_position) {
+            commands.spawn((
+                Drawing,
+                Mesh2d(meshes.add(Mesh::from(Points(vec![world_position])))),
+                MeshMaterial2d(materials.add(PointsMaterial {
+                    settings: PointsSettings {
+                        color: LinearRgba::rgb(
+                            window_position.x / window.width(),
+                            window_position.y / window.height(),
+                            1.0,
+                        ),
+                        radius: 20.,
+                    },
+                })),
+            ));
         }
     }
 }
 
-pub fn handle_mouse(
-    camera_query: Single<(&Camera, &GlobalTransform)>,
-    windows: Query<&Window>,
-    mut button_events: EventReader<MouseButtonInput>,
-) {
-    for button_event in button_events.read() {
-        if button_event.button != MouseButton::Left {
-            continue;
-        }
-        // *mouse_pressed = MousePressed(button_event.state.is_pressed());
-        println!("mouse pressed");
+pub fn end_drawing(mut commands: Commands, drawings: Query<Entity, With<Drawing>>) {
+    for drawing in &drawings {
+        commands.entity(drawing).remove::<Drawing>();
     }
+}
+
+pub fn draw(
+    mut cursor: EventReader<CursorMoved>,
+    drawing: Single<&Mesh2d, With<Drawing>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    camera_query: Single<(&Camera, &GlobalTransform)>,
+) {
     let (camera, camera_transform) = *camera_query;
-
-    let Ok(window) = windows.get_single() else {
-        return;
-    };
-
-    let Some(cursor_position) = window.cursor_position() else {
-        return;
-    };
-
-    let Ok(point) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
-        return;
-    };
-    dbg!(point);
+    if let Some(mesh) = meshes.get_mut(*drawing) {
+        for moved in cursor.read() {
+            if let Some(world_position) = window_to_world(camera, camera_transform, moved.position)
+            {
+                Points::append(mesh, world_position);
+            };
+        }
+    }
 }

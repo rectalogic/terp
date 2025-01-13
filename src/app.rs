@@ -1,5 +1,6 @@
 use bevy::{
     app::{App, Startup},
+    input::common_conditions::{input_just_pressed, input_just_released, input_pressed},
     prelude::*,
     sprite::Material2dPlugin,
     DefaultPlugins,
@@ -26,7 +27,14 @@ pub fn build() -> App {
         Material2dPlugin::<PointsMaterial>::default(),
     ))
     .add_systems(Startup, setup::setup)
-    // .add_systems(Update, (render::handle_mouse, render::draw))
-    ;
+    .add_systems(
+        Update,
+        (
+            render::start_drawing.run_if(input_just_pressed(MouseButton::Left)),
+            render::draw.run_if(input_pressed(MouseButton::Left)),
+            render::end_drawing.run_if(input_just_released(MouseButton::Left)),
+        )
+            .chain(),
+    );
     app
 }

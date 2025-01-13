@@ -21,14 +21,14 @@ struct PointsSettings {
 @group(2) @binding(0)
 var<uniform> settings: PointsSettings;
 
-// Equilateral triangle with side length 1.0
-const triangle = array(
-  vec3f( 0.0,  sqrt(3.0) / 3.0, 0.0),   // top center
-  vec3f(-0.5, -sqrt(3.0) / 6.0, 0.0),   // bottom left
-  vec3f( 0.5, -sqrt(3.0) / 6.0, 0.0)    // bottom right
-);
 // Radius is 1.0*sqrt(3)/6
 const radius = sqrt(3.0) / 6.0;
+// Equilateral triangle with side length 1.0
+const triangle = array(
+    vec3f( 0.0,  sqrt(3.0) / 3.0, 0.0),   // top center
+    vec3f(-0.5, -radius, 0.0),            // bottom left
+    vec3f( 0.5, -radius, 0.0)             // bottom right
+);
 
 @vertex
 fn vertex(vertex: VertexInput) -> VertexOutput {
@@ -38,7 +38,8 @@ fn vertex(vertex: VertexInput) -> VertexOutput {
     let index = vertex.vertex_index % 3;
 
     // Height of triangle containing a circle of radius 'r' is '3r'
-    let scale = f32(3 * settings.radius);
+    // Compute scale of equilateral triangle of side length 1 to achieve desired radius
+    let scale = 2.0 * settings.radius * sqrt(3.0);
     let position = vertex.position + (triangle[index] * scale);
 
     let world_from_local = mesh_functions::get_world_from_local(vertex.instance_index);

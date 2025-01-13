@@ -57,26 +57,11 @@ fn vertex(vertex: VertexInput) -> VertexOutput {
 fn fragment(input: VertexOutput) -> @location(0) vec4f {
     let dist = distance(vec2f(0.0, 0.0), input.triangle_position);
 
-    if dist < radius {
-        return vec4<f32>(0.0, 0.0, 1.0, 1.0);
-    } else {
+    // 2 pixel smooth border
+    let edge_size = 2.0 / view.viewport.w; // 2px in UV space
+    let alpha = 1.0 - smoothstep(radius - edge_size, radius, dist);
+    if alpha <= 0.0 {
         discard;
     }
+    return vec4f(settings.color.rgb, settings.color.a * alpha);
 }
-
-/*
-@fragment
-fn fragmentY(input: VertexOutput) -> @location(0) vec4f {
-    const radius = 1.0 / 3.0;
-    // Get distance from uv to circle center
-    let dist = distance(vec2f(0.5, 2.0 / 3.0), input.uv);
-    // 1 pixel smooth border
-    let edge_size = 1.0 / view.viewport.w; // 1px in UV space
-    let alpha = 1.0 - smoothstep(radius - edge_size, radius, dist);
-    // if alpha <= 0.0 {
-    //     discard;
-    // }
-    return vec4f(alpha, alpha, alpha, 1.0);
-    // return vec4f(settings.color.rgb, settings.color.a * alpha);
-}
-*/

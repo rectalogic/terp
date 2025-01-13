@@ -93,7 +93,7 @@ pub fn setup(
         MeshMaterial2d(materials.add(PointsMaterial {
             settings: PointsSettings {
                 color: LinearRgba::BLUE,
-                radius: 10.,
+                radius: 20.,
             },
         })),
         Transform::default(),

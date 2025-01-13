@@ -11,7 +11,7 @@ struct VertexInput {
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4f,
-    @location(0) uv: vec2f,
+    @location(0) triangle_position: vec2f,
 };
 
 struct PointsSettings {
@@ -21,19 +21,14 @@ struct PointsSettings {
 @group(2) @binding(0)
 var<uniform> settings: PointsSettings;
 
-// Offset Y so the center of the circle aligns with the incoming point
-// The unit square is 3r high, so radius is 1/3 and center in Y is 0.5
-const offset_y = 0.5 - (1.0 / 3.0);
+// Equilateral triangle with side length 1.0
 const triangle = array(
-    vec3f(0.0, 0.5 + offset_y, 0.0),   // top center
-    vec3f(-0.5, -0.5 + offset_y, 0.0), // bottom left
-    vec3f(0.5, -0.5 + offset_y, 0.0),  // bottom right
+  vec3f( 0.0,  sqrt(3.0) / 3.0, 0.0),   // top center
+  vec3f(-0.5, -sqrt(3.0) / 6.0, 0.0),   // bottom left
+  vec3f( 0.5, -sqrt(3.0) / 6.0, 0.0)    // bottom right
 );
-const uv = array(
-    vec2f(0.5, 0.0),  // top center
-    vec2f(0.0, 1.0),  // bottom left
-    vec2f(1.0, 1.0),  // bottom right
-);
+// Radius is 1.0*sqrt(3)/6
+const radius = sqrt(3.0) / 6.0;
 
 @vertex
 fn vertex(vertex: VertexInput) -> VertexOutput {
@@ -53,18 +48,35 @@ fn vertex(vertex: VertexInput) -> VertexOutput {
     );
 
     out.clip_position = mesh_functions::mesh2d_position_world_to_clip(world_position);
-    out.uv = uv[index];
+    out.triangle_position = triangle[index].xy;
 
     return out;
 }
 
 @fragment
 fn fragment(input: VertexOutput) -> @location(0) vec4f {
+    let dist = distance(vec2f(0.0, 0.0), input.triangle_position);
+
+    if dist < radius {
+        return vec4<f32>(0.0, 0.0, 1.0, 1.0);
+    } else {
+        discard;
+    }
+}
+
+/*
+@fragment
+fn fragmentY(input: VertexOutput) -> @location(0) vec4f {
     const radius = 1.0 / 3.0;
     // Get distance from uv to circle center
     let dist = distance(vec2f(0.5, 2.0 / 3.0), input.uv);
-    if dist > radius {
-        discard;
-    }
-    return settings.color;
+    // 1 pixel smooth border
+    let edge_size = 1.0 / view.viewport.w; // 1px in UV space
+    let alpha = 1.0 - smoothstep(radius - edge_size, radius, dist);
+    // if alpha <= 0.0 {
+    //     discard;
+    // }
+    return vec4f(alpha, alpha, alpha, 1.0);
+    // return vec4f(settings.color.rgb, settings.color.a * alpha);
 }
+*/

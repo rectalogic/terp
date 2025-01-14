@@ -39,6 +39,10 @@ pub fn start_drawing(
                             1.0,
                         ),
                         radius: 20.,
+                        target_color: LinearRgba::rgb(1., 1., 1.),
+                        target_radius: 5.,
+                        t: 0.5,
+                        //XXX need a Z layer here, increment for each new drawing (to prevent Z-fighting)
                     },
                 })),
             ));

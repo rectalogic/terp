@@ -11,11 +11,7 @@ use crate::{points::PointsMaterial, render, setup};
 pub fn build() -> App {
     let mut app = App::new();
 
-    app.insert_resource(AmbientLight {
-        brightness: 1000.0,
-        ..default()
-    })
-    .add_plugins((
+    app.add_plugins((
         DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Curves".into(),

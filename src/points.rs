@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use bevy::{
     asset::RenderAssetUsages,
     prelude::*,
@@ -18,6 +20,13 @@ pub struct PointsSettings {
     pub target_color: LinearRgba,
     pub target_radius: f32,
     pub t: f32,
+}
+
+impl PointsSettings {
+    pub fn interpolated(&mut self, other: &Self) {
+        self.target_color = other.color;
+        self.target_radius = other.radius;
+    }
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
@@ -66,27 +75,63 @@ impl Points {
         }
     }
 
-    // XXX add a combine() that takes 2 Mesh and makes one the target of the other by padding points
+    // Merge target into source interpolated
+    pub fn interpolate(source: &mut Mesh, target: &mut Mesh) {
+        let Some(VertexAttributeValues::Float32x3(ref mut source_positions)) =
+            source.attribute_mut(Mesh::ATTRIBUTE_POSITION)
+        else {
+            return;
+        };
+        let Some(VertexAttributeValues::Float32x3(ref target_positions)) =
+            target.attribute(Mesh::ATTRIBUTE_POSITION)
+        else {
+            return;
+        };
+        let source_len = source_positions.len();
+        let target_len = target_positions.len();
+        match source_len.cmp(&target_len) {
+            Ordering::Greater => {
+                source.insert_attribute(
+                    ATTRIBUTE_TARGET_POSITION,
+                    Self::pad_positions(target_positions, source_len),
+                );
+            }
+            Ordering::Less => {
+                *source_positions = Self::pad_positions(source_positions, target_len);
+                source.insert_attribute(ATTRIBUTE_TARGET_POSITION, target_positions.clone());
+            }
+            Ordering::Equal => {
+                source.insert_attribute(ATTRIBUTE_TARGET_POSITION, target_positions.clone());
+            }
+        }
+    }
 
-    // XXX should this handle triples?
-    pub fn pad<T>(points: Vec<T>, target_len: usize) -> Vec<T>
+    // Pad positions to match target_len, both lengths must be divisible by 3
+    fn pad_positions<T>(positions: &[T], target_len: usize) -> Vec<T>
     where
         T: Copy,
     {
-        if points.is_empty() || target_len == 0 || points.len() >= target_len {
-            return points;
+        const TRIPLE: usize = 3;
+
+        if positions.is_empty() || target_len == 0 || positions.len() >= target_len {
+            panic!("Positions is empty or too long");
+        }
+        if positions.len() % TRIPLE != 0 || target_len % TRIPLE != 0 {
+            panic!("Positions must be triples");
         }
 
         let mut result = Vec::with_capacity(target_len);
 
-        // Calculate how many times each element needs to be repeated on average
-        let ratio = (target_len as f32) / (points.len() as f32);
+        // Calculate how many times each position needs to be repeated on average
+        let ratio = (target_len as f32) / (positions.len() as f32);
+        let positions_triples_len = positions.len() / TRIPLE;
 
-        // For each target position, figure out which source element should be used
-        for i in 0..target_len {
+        // For each target position, figure out which source position should be used
+        for i in 0..target_len / 3 {
             // Convert to index
-            let src_pos = ((i as f32 / ratio).floor() as usize).min(points.len() - 1);
-            result.push(points[src_pos]);
+            let src_pos =
+                ((i as f32 / ratio).floor() as usize).min(positions_triples_len - 1) * TRIPLE;
+            result.extend(&positions[src_pos..(src_pos + TRIPLE)]);
         }
 
         result
@@ -111,5 +156,18 @@ impl From<Points> for Mesh {
                 })
                 .collect::<Vec<[f32; 3]>>(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn padding() {
+        assert_eq!(
+            Points::pad_positions(&[1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4], 7 * 3),
+            vec![1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4,]
+        );
     }
 }

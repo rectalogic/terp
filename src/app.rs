@@ -6,7 +6,7 @@ use bevy::{
     DefaultPlugins,
 };
 
-use crate::{points::PointsMaterial, render, setup};
+use crate::{camera, points::PointsMaterial, render, setup};
 
 pub fn build() -> App {
     let mut app = App::new();
@@ -14,8 +14,8 @@ pub fn build() -> App {
     app.add_plugins((
         DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Curves".into(),
-                resolution: (800., 800.).into(),
+                title: "Terp".into(),
+                resolution: (800., 400.).into(),
                 ..default()
             }),
             ..default()
@@ -26,11 +26,14 @@ pub fn build() -> App {
     .add_systems(
         Update,
         (
-            render::start_drawing.run_if(input_just_pressed(MouseButton::Left)),
-            render::draw.run_if(input_pressed(MouseButton::Left)),
-            render::end_drawing.run_if(input_just_released(MouseButton::Left)),
-        )
-            .chain(),
+            camera::update_camera_viewports,
+            (
+                render::start_drawing.run_if(input_just_pressed(MouseButton::Left)),
+                render::draw.run_if(input_pressed(MouseButton::Left)),
+                render::end_drawing.run_if(input_just_released(MouseButton::Left)),
+            )
+                .chain(),
+        ),
     );
     app
 }

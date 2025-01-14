@@ -1,4 +1,4 @@
-use curves::app;
+use terp::app;
 
 fn main() {
     app::build().run();

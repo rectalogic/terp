@@ -14,11 +14,11 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(Material2dPlugin::<PointsMaterial>::default());
 }
 
-pub const ATTRIBUTE_TARGET_POSITION: MeshVertexAttribute =
+pub(crate) const ATTRIBUTE_TARGET_POSITION: MeshVertexAttribute =
     MeshVertexAttribute::new("TargetPosition", 978541968, VertexFormat::Float32x3);
 
 #[derive(Debug, Clone, Default, ShaderType)]
-pub struct PointsSettings {
+pub(crate) struct PointsSettings {
     pub color: LinearRgba,
     pub radius: f32,
     pub target_color: LinearRgba,
@@ -27,16 +27,16 @@ pub struct PointsSettings {
 }
 
 impl PointsSettings {
-    pub fn interpolated(&mut self, other: &Self) {
+    pub(crate) fn interpolated(&mut self, other: &Self) {
         self.target_color = other.color;
         self.target_radius = other.radius;
     }
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-pub struct PointsMaterial {
+pub(crate) struct PointsMaterial {
     #[uniform(0)]
-    pub settings: PointsSettings,
+    pub(crate) settings: PointsSettings,
 }
 
 impl Material2d for PointsMaterial {
@@ -64,10 +64,10 @@ impl Material2d for PointsMaterial {
 }
 
 #[derive(Clone)]
-pub struct Points(pub Vec<Vec2>);
+pub(crate) struct Points(pub Vec<Vec2>);
 
 impl Points {
-    pub fn append(mesh: &mut Mesh, point: Vec2) {
+    pub(crate) fn append(mesh: &mut Mesh, point: Vec2) {
         if let Some(VertexAttributeValues::Float32x3(ref mut positions)) =
             mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
         {
@@ -80,7 +80,7 @@ impl Points {
     }
 
     // Merge target into source interpolated
-    pub fn interpolate(source: &mut Mesh, target: &mut Mesh) {
+    pub(crate) fn interpolate(source: &mut Mesh, target: &mut Mesh) {
         let Some(VertexAttributeValues::Float32x3(ref mut source_positions)) =
             source.attribute_mut(Mesh::ATTRIBUTE_POSITION)
         else {

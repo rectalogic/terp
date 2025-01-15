@@ -4,6 +4,12 @@ pub mod camera;
 pub mod draw;
 pub mod points;
 
+#[derive(Component, Clone)]
+enum InterpolationType {
+    Source,
+    Target,
+}
+
 pub struct AppPlugin;
 
 impl Plugin for AppPlugin {

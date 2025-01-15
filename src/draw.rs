@@ -5,7 +5,10 @@ use bevy::{
     window::PrimaryWindow,
 };
 
-use crate::points::{Points, PointsMaterial, PointsSettings};
+use crate::{
+    points::{Points, PointsMaterial, PointsSettings},
+    InterpolationType,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -20,7 +23,7 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 #[derive(Component)]
-pub struct Drawing;
+struct ActiveDrawing;
 
 fn window_to_world(
     camera: &Camera,
@@ -42,10 +45,12 @@ fn start_drawing(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<PointsMaterial>>,
     window: Single<&Window, With<PrimaryWindow>>,
-    camera_query: Query<(&Camera, &RenderLayers, &GlobalTransform)>,
+    camera_query: Query<(&Camera, &RenderLayers, &GlobalTransform, &InterpolationType)>,
 ) {
     if let Some(window_position) = window.cursor_position() {
-        for (camera, camera_render_layers, camera_transform) in &camera_query {
+        for (camera, camera_render_layers, camera_transform, camera_interpolation_type) in
+            &camera_query
+        {
             if !camera
                 .logical_viewport_rect()
                 .unwrap()
@@ -57,8 +62,9 @@ fn start_drawing(
             if let Some(world_position) = window_to_world(camera, camera_transform, window_position)
             {
                 commands.spawn((
-                    Drawing,
+                    ActiveDrawing,
                     camera_render_layers.clone(),
+                    camera_interpolation_type.clone(),
                     Mesh2d(meshes.add(Mesh::from(Points(vec![world_position])))),
                     MeshMaterial2d(materials.add(PointsMaterial {
                         settings: PointsSettings {
@@ -80,15 +86,15 @@ fn start_drawing(
     }
 }
 
-fn end_drawing(mut commands: Commands, drawings: Query<Entity, With<Drawing>>) {
+fn end_drawing(mut commands: Commands, drawings: Query<Entity, With<ActiveDrawing>>) {
     for drawing in &drawings {
-        commands.entity(drawing).remove::<Drawing>();
+        commands.entity(drawing).remove::<ActiveDrawing>();
     }
 }
 
 fn draw(
     mut cursor: EventReader<CursorMoved>,
-    drawing: Single<(&Mesh2d, &RenderLayers), With<Drawing>>,
+    drawing: Single<(&Mesh2d, &RenderLayers), With<ActiveDrawing>>,
     mut meshes: ResMut<Assets<Mesh>>,
     camera_query: Query<(&Camera, &RenderLayers, &GlobalTransform)>,
 ) {

@@ -1,6 +1,23 @@
-use bevy::{prelude::*, render::view::RenderLayers, window::PrimaryWindow};
+use bevy::{
+    input::common_conditions::{input_just_pressed, input_just_released, input_pressed},
+    prelude::*,
+    render::view::RenderLayers,
+    window::PrimaryWindow,
+};
 
 use crate::points::{Points, PointsMaterial, PointsSettings};
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            start_drawing.run_if(input_just_pressed(MouseButton::Left)),
+            draw.run_if(input_pressed(MouseButton::Left)),
+            end_drawing.run_if(input_just_released(MouseButton::Left)),
+        )
+            .chain(),
+    );
+}
 
 #[derive(Component)]
 pub struct Drawing;
@@ -20,7 +37,7 @@ fn window_to_world(
     None
 }
 
-pub fn start_drawing(
+fn start_drawing(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<PointsMaterial>>,
@@ -63,13 +80,13 @@ pub fn start_drawing(
     }
 }
 
-pub fn end_drawing(mut commands: Commands, drawings: Query<Entity, With<Drawing>>) {
+fn end_drawing(mut commands: Commands, drawings: Query<Entity, With<Drawing>>) {
     for drawing in &drawings {
         commands.entity(drawing).remove::<Drawing>();
     }
 }
 
-pub fn draw(
+fn draw(
     mut cursor: EventReader<CursorMoved>,
     drawing: Single<(&Mesh2d, &RenderLayers), With<Drawing>>,
     mut meshes: ResMut<Assets<Mesh>>,

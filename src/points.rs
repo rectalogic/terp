@@ -7,8 +7,12 @@ use bevy::{
         mesh::{MeshVertexAttribute, VertexAttributeValues},
         render_resource::{AsBindGroup, ShaderRef, ShaderType, VertexFormat},
     },
-    sprite::Material2d,
+    sprite::{Material2d, Material2dPlugin},
 };
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_plugins(Material2dPlugin::<PointsMaterial>::default());
+}
 
 pub const ATTRIBUTE_TARGET_POSITION: MeshVertexAttribute =
     MeshVertexAttribute::new("TargetPosition", 978541968, VertexFormat::Float32x3);

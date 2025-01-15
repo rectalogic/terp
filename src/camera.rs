@@ -1,4 +1,13 @@
-use bevy::{prelude::*, render::camera::Viewport, window::WindowResized};
+use bevy::{
+    prelude::*,
+    render::{camera::Viewport, view::RenderLayers},
+    window::WindowResized,
+};
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(Startup, setup_cameras)
+        .add_systems(Update, update_camera_viewports);
+}
 
 #[derive(Component)]
 pub enum CameraType {
@@ -6,7 +15,29 @@ pub enum CameraType {
     Target,
 }
 
-pub fn update_camera_viewports(
+fn setup_cameras(mut commands: Commands) {
+    // Splitscreen cameras
+    commands.spawn((
+        Camera2d,
+        Camera {
+            order: 0,
+            ..default()
+        },
+        RenderLayers::layer(1),
+        CameraType::Source,
+    ));
+    commands.spawn((
+        Camera2d,
+        Camera {
+            order: 1,
+            ..default()
+        },
+        RenderLayers::layer(2),
+        CameraType::Target,
+    ));
+}
+
+fn update_camera_viewports(
     windows: Query<&Window>,
     mut resize_events: EventReader<WindowResized>,
     mut query: Query<(&CameraType, &mut Camera)>,

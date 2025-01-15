@@ -1,5 +1,6 @@
-use terp::app;
+use bevy::prelude::*;
+use terp::AppPlugin;
 
 fn main() {
-    app::build().run();
+    App::new().add_plugins(AppPlugin).run();
 }

@@ -64,15 +64,15 @@ impl Material2d for PointsMaterial {
 }
 
 #[derive(Clone)]
-pub(crate) struct Points(pub Vec<Vec2>);
+pub(crate) struct Points(pub Vec<Vec3>);
 
 impl Points {
-    pub(crate) fn append(mesh: &mut Mesh, point: Vec2) {
+    pub(crate) fn append(mesh: &mut Mesh, point: Vec3) {
         if let Some(VertexAttributeValues::Float32x3(ref mut positions)) =
             mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
         {
             positions.reserve(3);
-            let p = [point.x, point.y, 0.0];
+            let p = point.to_array();
             positions.push(p);
             positions.push(p);
             positions.push(p);
@@ -155,7 +155,7 @@ impl From<Points> for Mesh {
                 .iter()
                 // Triple each vertex so we can construct triangles
                 .flat_map(|p| {
-                    let p = [p.x, p.y, 0.0];
+                    let p = p.to_array();
                     [p, p, p]
                 })
                 .collect::<Vec<[f32; 3]>>(),

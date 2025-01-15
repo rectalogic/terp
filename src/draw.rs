@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
+    app.insert_resource(DrawingCount::default()).add_systems(
         Update,
         (
             start_drawing.run_if(input_just_pressed(MouseButton::Left)),
@@ -22,8 +22,19 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+#[derive(Resource, Default)]
+struct DrawingCount {
+    source: usize,
+    target: usize,
+}
+
 #[derive(Component)]
 struct ActiveDrawing;
+
+#[derive(Component)]
+struct DrawingNumber {
+    count: usize,
+}
 
 fn window_to_world(
     camera: &Camera,
@@ -42,6 +53,7 @@ fn window_to_world(
 
 fn start_drawing(
     mut commands: Commands,
+    mut drawing_count: ResMut<DrawingCount>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<PointsMaterial>>,
     window: Single<&Window, With<PrimaryWindow>>,
@@ -59,13 +71,29 @@ fn start_drawing(
                 continue;
             }
 
+            let count = match camera_interpolation_type {
+                InterpolationType::Source => {
+                    drawing_count.source += 1;
+                    drawing_count.source
+                }
+
+                InterpolationType::Target => {
+                    drawing_count.target += 1;
+                    drawing_count.target
+                }
+            };
+
             if let Some(world_position) = window_to_world(camera, camera_transform, window_position)
             {
                 commands.spawn((
                     ActiveDrawing,
+                    DrawingNumber { count },
                     camera_render_layers.clone(),
                     camera_interpolation_type.clone(),
-                    Mesh2d(meshes.add(Mesh::from(Points(vec![world_position])))),
+                    Mesh2d(meshes.add(Mesh::from(Points(vec![Vec3::from((
+                        world_position,
+                        count as f32, // use count as Z index
+                    ))])))),
                     MeshMaterial2d(materials.add(PointsMaterial {
                         settings: PointsSettings {
                             color: LinearRgba::rgb(
@@ -94,11 +122,11 @@ fn end_drawing(mut commands: Commands, drawings: Query<Entity, With<ActiveDrawin
 
 fn draw(
     mut cursor: EventReader<CursorMoved>,
-    drawing: Single<(&Mesh2d, &RenderLayers), With<ActiveDrawing>>,
+    drawing: Single<(&Mesh2d, &RenderLayers, &DrawingNumber), With<ActiveDrawing>>,
     mut meshes: ResMut<Assets<Mesh>>,
     camera_query: Query<(&Camera, &RenderLayers, &GlobalTransform)>,
 ) {
-    let (mesh2d, drawing_render_layers) = *drawing;
+    let (mesh2d, drawing_render_layers, drawing_number) = *drawing;
     if let Some(mesh) = meshes.get_mut(mesh2d) {
         for (camera, camera_render_layers, camera_transform) in &camera_query {
             if !camera_render_layers.intersects(drawing_render_layers) {
@@ -109,7 +137,10 @@ fn draw(
                 if let Some(world_position) =
                     window_to_world(camera, camera_transform, moved.position)
                 {
-                    Points::append(mesh, world_position);
+                    Points::append(
+                        mesh,
+                        Vec3::from((world_position, drawing_number.count as f32)),
+                    );
                 };
             }
         }

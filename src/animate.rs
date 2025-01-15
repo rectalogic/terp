@@ -3,7 +3,7 @@ use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 use crate::points::PointsMaterial;
 
 pub(super) fn plugin(app: &mut App) {
-    app.insert_resource(Animate::default()).add_systems(
+    app.insert_resource(Animation::default()).add_systems(
         Update,
         (
             animate.run_if(animating),
@@ -14,12 +14,13 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 #[derive(Resource)]
-struct Animate {
+struct Animation {
     animating: bool,
     curve: PingPongCurve<f32, LinearReparamCurve<f32, EasingCurve<f32>>>,
+    time: f32,
 }
 
-impl Animate {
+impl Animation {
     pub fn new(easing: EaseFunction) -> Self {
         Self {
             animating: false,
@@ -28,10 +29,11 @@ impl Animate {
                 .expect("good curve")
                 .ping_pong()
                 .expect("good curve"),
+            time: 0.0,
         }
     }
 }
-impl Default for Animate {
+impl Default for Animation {
     fn default() -> Self {
         Self::new(EaseFunction::CubicInOut)
     }
@@ -40,8 +42,8 @@ impl Default for Animate {
 #[derive(Component)]
 pub struct Animatable;
 
-fn animating(animate: Res<Animate>) -> bool {
-    animate.animating
+fn animating(animation: Res<Animation>) -> bool {
+    animation.animating
 }
 
 fn update_times(
@@ -57,11 +59,12 @@ fn update_times(
 }
 
 fn toggle_animation(
-    mut animation: ResMut<Animate>,
+    mut animation: ResMut<Animation>,
     animation_query: Query<&MeshMaterial2d<PointsMaterial>, With<Animatable>>,
     points_materials: ResMut<Assets<PointsMaterial>>,
 ) {
     animation.animating = !animation.animating;
+    animation.time = 0.0;
     if !animation.animating {
         update_times(animation_query, points_materials, 0.0);
     }
@@ -70,11 +73,11 @@ fn toggle_animation(
 fn animate(
     animation_query: Query<&MeshMaterial2d<PointsMaterial>, With<Animatable>>,
     points_materials: ResMut<Assets<PointsMaterial>>,
-    animation: Res<Animate>,
+    mut animation: ResMut<Animation>,
     time: Res<Time>,
 ) {
-    let now = time.elapsed_secs() % animation.curve.domain().length();
-    if let Some(t) = animation.curve.sample(now) {
+    animation.time = (animation.time + time.delta_secs()) % animation.curve.domain().length();
+    if let Some(t) = animation.curve.sample(animation.time) {
         update_times(animation_query, points_materials, t);
     }
 }

@@ -73,12 +73,8 @@ fn vertex(vertex: VertexInput) -> VertexOutput {
 @fragment
 fn fragment(input: VertexOutput) -> @location(0) vec4f {
     let dist = distance(vec2f(0.0, 0.0), input.triangle_position);
-
-    // 2 pixel smooth border
-    let edge_size = 2.0 / view.viewport.w; // 2px in UV space
-    let alpha = 1.0 - smoothstep(radius - edge_size, radius, dist);
-    if alpha <= 0.0 {
+    if dist > radius {
         discard;
     }
-    return vec4f(input.color.rgb, input.color.a * alpha);
+    return input.color;
 }

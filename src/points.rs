@@ -17,7 +17,7 @@ pub(super) fn plugin(app: &mut App) {
 pub(crate) const ATTRIBUTE_TARGET_POSITION: MeshVertexAttribute =
     MeshVertexAttribute::new("TargetPosition", 978541968, VertexFormat::Float32x3);
 
-#[derive(Debug, Clone, Default, ShaderType)]
+#[derive(Debug, Copy, Clone, Default, ShaderType)]
 pub(crate) struct PointsSettings {
     pub color: LinearRgba,
     pub radius: f32,
@@ -27,9 +27,10 @@ pub(crate) struct PointsSettings {
 }
 
 impl PointsSettings {
-    pub(crate) fn interpolated(&mut self, other: &Self) {
-        self.target_color = other.color;
-        self.target_radius = other.radius;
+    pub(crate) fn interpolated(&mut self, target: &Self) {
+        self.target_color = target.color;
+        self.target_radius = target.radius;
+        self.t = 0.0;
     }
 }
 
@@ -80,7 +81,7 @@ impl Points {
     }
 
     // Merge target into source interpolated
-    pub(crate) fn interpolate(source: &mut Mesh, target: &mut Mesh) {
+    pub(crate) fn interpolate(source: &mut Mesh, target: &Mesh) {
         let Some(VertexAttributeValues::Float32x3(ref mut source_positions)) =
             source.attribute_mut(Mesh::ATTRIBUTE_POSITION)
         else {

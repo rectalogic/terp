@@ -1,4 +1,5 @@
 use bevy::{
+    ecs::query::QueryEntityError,
     input::common_conditions::{input_just_pressed, input_just_released, input_pressed},
     prelude::*,
     render::view::RenderLayers,
@@ -114,9 +115,76 @@ fn start_drawing(
     }
 }
 
-fn end_drawing(mut commands: Commands, drawings: Query<Entity, With<ActiveDrawing>>) {
-    for drawing in &drawings {
-        commands.entity(drawing).remove::<ActiveDrawing>();
+fn end_drawing(
+    mut commands: Commands,
+    active_drawing: Single<(Entity, &DrawingNumber, &InterpolationType), With<ActiveDrawing>>,
+    unmerged_drawings: Query<(Entity, &DrawingNumber, &InterpolationType), Without<ActiveDrawing>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<PointsMaterial>>,
+    mesh_query: Query<(&Mesh2d, &MeshMaterial2d<PointsMaterial>), With<DrawingNumber>>,
+) {
+    let (active_drawing, active_drawing_number, active_interpolation_type) = *active_drawing;
+    commands.entity(active_drawing).remove::<ActiveDrawing>();
+    // Try to find a drawing of the opposite interpolation with the same number
+    for (unmerged_drawing, unmerged_drawing_number, unmerged_interpolation_type) in
+        &unmerged_drawings
+    {
+        if unmerged_drawing_number.count == active_drawing_number.count
+            && *unmerged_interpolation_type != *active_interpolation_type
+        {
+            let (source_entity, target_entity) = match *active_interpolation_type {
+                InterpolationType::Source => (active_drawing, unmerged_drawing),
+                InterpolationType::Target => (unmerged_drawing, active_drawing),
+            };
+
+            let mut process_mesh_material = |result: Result<
+                (&Mesh2d, &MeshMaterial2d<PointsMaterial>),
+                QueryEntityError<'_>,
+            >| {
+                result.ok().and_then(|(mesh2d, material2d)| {
+                    meshes.remove(mesh2d).and_then(|mesh| {
+                        materials
+                            .remove(material2d)
+                            .map(|material| (mesh, material))
+                    })
+                })
+            };
+
+            let Some((mut source_mesh, mut source_material)) =
+                process_mesh_material(mesh_query.get(source_entity))
+            else {
+                return;
+            };
+            let Some((target_mesh, mut target_material)) =
+                process_mesh_material(mesh_query.get(target_entity))
+            else {
+                return;
+            };
+
+            Points::interpolate(&mut source_mesh, &target_mesh);
+            let mesh_handle = meshes.add(source_mesh);
+
+            source_material
+                .settings
+                .interpolated(&target_material.settings);
+            target_material.settings = source_material.settings;
+            target_material.settings.t = 1.0;
+
+            commands
+                .entity(target_entity)
+                .insert((
+                    Mesh2d(mesh_handle.clone()),
+                    MeshMaterial2d(materials.add(target_material)),
+                ))
+                .remove::<DrawingNumber>();
+            commands
+                .entity(source_entity)
+                .insert((
+                    Mesh2d(mesh_handle),
+                    MeshMaterial2d(materials.add(source_material)),
+                ))
+                .remove::<DrawingNumber>();
+        }
     }
 }
 

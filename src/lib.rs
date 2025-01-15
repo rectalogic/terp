@@ -4,7 +4,7 @@ pub mod camera;
 pub mod draw;
 pub mod points;
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, PartialEq)]
 enum InterpolationType {
     Source,
     Target,

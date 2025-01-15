@@ -1,6 +1,6 @@
 use bevy::{app::App, prelude::*, DefaultPlugins};
 
-mod animate;
+mod animation;
 mod camera;
 mod draw;
 mod points;
@@ -27,7 +27,7 @@ impl Plugin for AppPlugin {
             camera::plugin,
             points::plugin,
             draw::plugin,
-            animate::plugin,
+            animation::plugin,
         ));
     }
 }

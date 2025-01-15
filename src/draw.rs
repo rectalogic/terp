@@ -7,7 +7,7 @@ use bevy::{
 };
 
 use crate::{
-    animate::Animatable,
+    animation::Animatable,
     points::{Points, PointsMaterial, PointsSettings},
     InterpolationType,
 };

@@ -1,8 +1,9 @@
 use bevy::{app::App, prelude::*, DefaultPlugins};
 
-pub mod camera;
-pub mod draw;
-pub mod points;
+mod animate;
+mod camera;
+mod draw;
+mod points;
 
 #[derive(Component, Clone, PartialEq)]
 enum InterpolationType {
@@ -26,6 +27,7 @@ impl Plugin for AppPlugin {
             camera::plugin,
             points::plugin,
             draw::plugin,
+            animate::plugin,
         ));
     }
 }

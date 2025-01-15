@@ -7,6 +7,7 @@ use bevy::{
 };
 
 use crate::{
+    animate::Animatable,
     points::{Points, PointsMaterial, PointsSettings},
     InterpolationType,
 };
@@ -120,7 +121,7 @@ fn end_drawing(
     active_drawing: Single<(Entity, &DrawingNumber, &InterpolationType), With<ActiveDrawing>>,
     unmerged_drawings: Query<(Entity, &DrawingNumber, &InterpolationType), Without<ActiveDrawing>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<PointsMaterial>>,
+    mut points_materials: ResMut<Assets<PointsMaterial>>,
     mesh_query: Query<(&Mesh2d, &MeshMaterial2d<PointsMaterial>), With<DrawingNumber>>,
 ) {
     let (active_drawing, active_drawing_number, active_interpolation_type) = *active_drawing;
@@ -143,7 +144,7 @@ fn end_drawing(
             >| {
                 result.ok().and_then(|(mesh2d, material2d)| {
                     meshes.remove(mesh2d).and_then(|mesh| {
-                        materials
+                        points_materials
                             .remove(material2d)
                             .map(|material| (mesh, material))
                     })
@@ -174,14 +175,15 @@ fn end_drawing(
                 .entity(target_entity)
                 .insert((
                     Mesh2d(mesh_handle.clone()),
-                    MeshMaterial2d(materials.add(target_material)),
+                    MeshMaterial2d(points_materials.add(target_material)),
                 ))
                 .remove::<DrawingNumber>();
             commands
                 .entity(source_entity)
                 .insert((
+                    Animatable,
                     Mesh2d(mesh_handle),
-                    MeshMaterial2d(materials.add(source_material)),
+                    MeshMaterial2d(points_materials.add(source_material)),
                 ))
                 .remove::<DrawingNumber>();
         }

@@ -17,8 +17,8 @@ fn hsv2rgb(c: vec3f) -> vec3f {
 @fragment
 fn fragment(input: VertexOutput) -> @location(0) vec4f {
     // Use polar coordinates instead of cartesian
-    let coord = vec2f(0.5, 0.5) - input.uv;
-    let angle = atan2(coord.y, coord.x);
+    let coord = vec2f(0.5) - input.uv;
+    let angle = atan2(-coord.y, coord.x);
     let radius = length(coord) * 2.0;
 
     if (radius > 1.0) {

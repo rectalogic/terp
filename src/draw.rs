@@ -9,16 +9,23 @@ use bevy::{
 use crate::{
     animation::Animatable,
     points::{Points, PointsMaterial, PointsSettings},
-    Interpolated,
+    util::window_position_to_world,
+    AppState, Brush, Interpolated,
 };
 
 pub(super) fn plugin(app: &mut App) {
     app.insert_resource(DrawingCount::default()).add_systems(
         Update,
         (
-            start_drawing.run_if(input_just_pressed(MouseButton::Left)),
-            draw.run_if(input_pressed(MouseButton::Left)),
-            end_drawing.run_if(input_just_released(MouseButton::Left)),
+            start_drawing
+                .run_if(in_state(AppState::Idle))
+                .run_if(run_if_pressed),
+            (
+                draw.run_if(input_pressed(MouseButton::Left)),
+                end_drawing.run_if(input_just_released(MouseButton::Left)),
+            )
+                .run_if(in_state(AppState::Draw))
+                .chain(),
         )
             .chain(),
     );
@@ -38,24 +45,22 @@ struct DrawingNumber {
     count: usize,
 }
 
-fn window_to_world(
-    camera: &Camera,
-    camera_transform: &GlobalTransform,
-    window_position: Vec2,
-) -> Option<Vec2> {
-    if let Some(viewport) = camera.logical_viewport_rect() {
-        if let Ok(point) =
-            camera.viewport_to_world_2d(camera_transform, window_position - viewport.min)
-        {
-            return Some(point);
-        }
-    }
-    None
+fn run_if_pressed(buttons: Res<ButtonInput<MouseButton>>, keys: Res<ButtonInput<KeyCode>>) -> bool {
+    buttons.just_pressed(MouseButton::Left)
+        && !keys.any_pressed([
+            KeyCode::ShiftLeft,
+            KeyCode::ShiftRight,
+            KeyCode::ControlLeft,
+            KeyCode::ControlRight,
+        ])
 }
 
+#[allow(clippy::too_many_arguments)]
 fn start_drawing(
     mut commands: Commands,
+    mut next_state: ResMut<NextState<AppState>>,
     mut drawing_count: ResMut<DrawingCount>,
+    brush: Res<Brush>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<PointsMaterial>>,
     window: Single<&Window, With<PrimaryWindow>>,
@@ -85,7 +90,8 @@ fn start_drawing(
                 }
             };
 
-            if let Some(world_position) = window_to_world(camera, camera_transform, window_position)
+            if let Some(world_position) =
+                window_position_to_world(camera, camera_transform, window_position)
             {
                 commands.spawn((
                     ActiveDrawing,
@@ -98,19 +104,21 @@ fn start_drawing(
                     ))])))),
                     MeshMaterial2d(materials.add(PointsMaterial {
                         settings: PointsSettings {
+                            // XXX brush.color.into()
                             color: LinearRgba::rgb(
                                 window_position.x / window.width(),
                                 window_position.y / window.height(),
                                 1.0,
                             ),
-                            radius: 20.,
+                            radius: brush.radius,
                             target_color: LinearRgba::rgb(1., 1., 1.),
-                            target_radius: 5.,
-                            t: 0.5,
-                            //XXX need a Z layer here, increment for each new drawing (to prevent Z-fighting)
+                            target_radius: brush.radius,
+                            t: 0.0,
                         },
                     })),
                 ));
+
+                next_state.set(AppState::Draw);
             }
         }
     }
@@ -118,12 +126,15 @@ fn start_drawing(
 
 fn end_drawing(
     mut commands: Commands,
+    mut next_state: ResMut<NextState<AppState>>,
     active_drawing: Single<(Entity, &DrawingNumber, &Interpolated), With<ActiveDrawing>>,
     unmerged_drawings: Query<(Entity, &DrawingNumber, &Interpolated), Without<ActiveDrawing>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut points_materials: ResMut<Assets<PointsMaterial>>,
     mesh_query: Query<(&Mesh2d, &MeshMaterial2d<PointsMaterial>), With<DrawingNumber>>,
 ) {
+    next_state.set(AppState::Idle);
+
     let (active_drawing, active_drawing_number, active_interpolation_type) = *active_drawing;
     commands.entity(active_drawing).remove::<ActiveDrawing>();
     // Try to find a drawing of the opposite interpolation with the same number
@@ -205,7 +216,7 @@ fn draw(
 
             for moved in cursor.read() {
                 if let Some(world_position) =
-                    window_to_world(camera, camera_transform, moved.position)
+                    window_position_to_world(camera, camera_transform, moved.position)
                 {
                     Points::append(
                         mesh,

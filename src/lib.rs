@@ -4,6 +4,31 @@ mod animation;
 mod camera;
 mod draw;
 mod points;
+mod ui;
+mod util;
+
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
+enum AppState {
+    Idle,
+    Draw,
+    BrushSize,
+    BrushColor,
+}
+
+#[derive(Resource, Copy, Clone)]
+struct Brush {
+    radius: f32,
+    color: Hsla,
+}
+
+impl Default for Brush {
+    fn default() -> Self {
+        Self {
+            radius: 10.,
+            color: Hsla::WHITE,
+        }
+    }
+}
 
 #[derive(Component, Clone, PartialEq)]
 #[require(Mesh2d, MeshMaterial2d<points::PointsMaterial>)]
@@ -29,6 +54,9 @@ impl Plugin for AppPlugin {
             points::plugin,
             draw::plugin,
             animation::plugin,
-        ));
+            ui::plugin,
+        ))
+        .insert_resource(Brush::default())
+        .insert_state(AppState::Idle);
     }
 }

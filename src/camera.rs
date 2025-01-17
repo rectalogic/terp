@@ -4,7 +4,7 @@ use bevy::{
     window::WindowResized,
 };
 
-use crate::InterpolationType;
+use crate::Interpolated;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, setup_cameras)
@@ -20,7 +20,7 @@ fn setup_cameras(mut commands: Commands) {
             ..default()
         },
         RenderLayers::layer(1),
-        InterpolationType::Source,
+        Interpolated::Source,
     ));
     commands.spawn((
         Camera2d,
@@ -29,14 +29,14 @@ fn setup_cameras(mut commands: Commands) {
             ..default()
         },
         RenderLayers::layer(2),
-        InterpolationType::Target,
+        Interpolated::Target,
     ));
 }
 
 fn update_camera_viewports(
     windows: Query<&Window>,
     mut resize_events: EventReader<WindowResized>,
-    mut query: Query<(&InterpolationType, &mut Camera)>,
+    mut query: Query<(&Interpolated, &mut Camera)>,
 ) {
     // Resize camera's viewports to split horizontal screen when window size changes.
     // A resize_event is also sent when the window is first created.
@@ -45,8 +45,8 @@ fn update_camera_viewports(
         let size = UVec2::new(window.physical_width() / 2, window.physical_height());
         for (interpolation_type, mut camera) in &mut query {
             let x = match interpolation_type {
-                InterpolationType::Source => 0,
-                InterpolationType::Target => size.x,
+                Interpolated::Source => 0,
+                Interpolated::Target => size.x,
             };
             camera.viewport = Some(Viewport {
                 physical_position: UVec2::new(x, 0),

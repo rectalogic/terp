@@ -6,7 +6,8 @@ mod draw;
 mod points;
 
 #[derive(Component, Clone, PartialEq)]
-enum InterpolationType {
+#[require(Mesh2d, MeshMaterial2d<points::PointsMaterial>)]
+enum Interpolated {
     Source,
     Target,
 }

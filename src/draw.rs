@@ -9,7 +9,7 @@ use bevy::{
 use crate::{
     animation::Animatable,
     points::{Points, PointsMaterial, PointsSettings},
-    InterpolationType,
+    Interpolated,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -59,7 +59,7 @@ fn start_drawing(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<PointsMaterial>>,
     window: Single<&Window, With<PrimaryWindow>>,
-    camera_query: Query<(&Camera, &RenderLayers, &GlobalTransform, &InterpolationType)>,
+    camera_query: Query<(&Camera, &RenderLayers, &GlobalTransform, &Interpolated)>,
 ) {
     if let Some(window_position) = window.cursor_position() {
         for (camera, camera_render_layers, camera_transform, camera_interpolation_type) in
@@ -74,12 +74,12 @@ fn start_drawing(
             }
 
             let count = match camera_interpolation_type {
-                InterpolationType::Source => {
+                Interpolated::Source => {
                     drawing_count.source += 1;
                     drawing_count.source
                 }
 
-                InterpolationType::Target => {
+                Interpolated::Target => {
                     drawing_count.target += 1;
                     drawing_count.target
                 }
@@ -118,8 +118,8 @@ fn start_drawing(
 
 fn end_drawing(
     mut commands: Commands,
-    active_drawing: Single<(Entity, &DrawingNumber, &InterpolationType), With<ActiveDrawing>>,
-    unmerged_drawings: Query<(Entity, &DrawingNumber, &InterpolationType), Without<ActiveDrawing>>,
+    active_drawing: Single<(Entity, &DrawingNumber, &Interpolated), With<ActiveDrawing>>,
+    unmerged_drawings: Query<(Entity, &DrawingNumber, &Interpolated), Without<ActiveDrawing>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut points_materials: ResMut<Assets<PointsMaterial>>,
     mesh_query: Query<(&Mesh2d, &MeshMaterial2d<PointsMaterial>), With<DrawingNumber>>,
@@ -134,8 +134,8 @@ fn end_drawing(
             && *unmerged_interpolation_type != *active_interpolation_type
         {
             let (source_entity, target_entity) = match *active_interpolation_type {
-                InterpolationType::Source => (active_drawing, unmerged_drawing),
-                InterpolationType::Target => (unmerged_drawing, active_drawing),
+                Interpolated::Source => (active_drawing, unmerged_drawing),
+                Interpolated::Target => (unmerged_drawing, active_drawing),
             };
 
             let mut process_mesh_material = |result: Result<

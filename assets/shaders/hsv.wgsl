@@ -6,12 +6,16 @@ var<uniform> color: vec4f;
 @group(2) @binding(1)
 var<uniform> value: f32;
 
+fn mod_glsl(x: vec3f, y: vec3f) -> vec3f {
+    return x - y * floor(x / y);
+}
+
 //  Function from Iñigo Quiles
 //  https://www.shadertoy.com/view/MsS3Wc
 fn hsv2rgb(c: vec3f) -> vec3f {
-    var rgb: vec3f = clamp(abs(((c.x * 6. + vec3f(0., 4., 2.)) % 6.) - 3.) - 1., vec3f(0.), vec3f(1.));
-	rgb = rgb * rgb * (3. - 2. * rgb);
-	return c.z * mix(vec3f(1.), rgb, c.y);
+    var rgb: vec3f = clamp(abs(mod_glsl((c.x * 6.0 + vec3f(0.0, 4.0, 2.0)), vec3f(6.0)) - 3.0) - 1., vec3f(0.0), vec3f(1.0));
+	rgb = rgb * rgb * (3.0 - 2.0 * rgb);
+	return c.z * mix(vec3f(1.0), rgb, c.y);
 }
 
 @fragment

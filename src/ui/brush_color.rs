@@ -33,7 +33,7 @@ pub(super) fn plugin(app: &mut App) {
             )
                 .chain(),
         )
-        .add_plugins(Material2dPlugin::<HslMaterial>::default());
+        .add_plugins(Material2dPlugin::<HsvMaterial>::default());
 }
 
 fn run_if_ctrl_click(
@@ -49,14 +49,15 @@ fn setup(
     mut commands: Commands,
     brush: Res<Brush>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<HslMaterial>>,
+    mut materials: ResMut<Assets<HsvMaterial>>,
 ) {
     commands.spawn((
         BrushColorControl,
         Visibility::Hidden,
         Mesh2d(meshes.add(Rectangle::new(RADIUS * 2.0, RADIUS * 2.0))),
-        MeshMaterial2d(materials.add(HslMaterial {
+        MeshMaterial2d(materials.add(HsvMaterial {
             color: brush.color.into(),
+            value: brush.color.value,
         })),
         Transform::default(),
     ));
@@ -67,10 +68,10 @@ fn start_select_color(
     mut next_state: ResMut<NextState<AppState>>,
     brush: Res<Brush>,
     brush_control: Single<
-        (Entity, &MeshMaterial2d<HslMaterial>, &mut Transform),
+        (Entity, &MeshMaterial2d<HsvMaterial>, &mut Transform),
         With<BrushColorControl>,
     >,
-    mut materials: ResMut<Assets<HslMaterial>>,
+    mut materials: ResMut<Assets<HsvMaterial>>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera_query: Single<(&Camera, &GlobalTransform), Without<Interpolated>>,
 ) {
@@ -93,12 +94,12 @@ fn select_color(
     brush_control: Single<
         (
             &GlobalTransform,
-            &MeshMaterial2d<HslMaterial>,
+            &MeshMaterial2d<HsvMaterial>,
             &mut Transform,
         ),
         With<BrushColorControl>,
     >,
-    mut materials: ResMut<Assets<HslMaterial>>,
+    mut materials: ResMut<Assets<HsvMaterial>>,
     camera_query: Single<(&Camera, &GlobalTransform), Without<Interpolated>>,
 ) {
     let (camera, camera_transform) = *camera_query;
@@ -131,13 +132,15 @@ fn end_select_color(
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct HslMaterial {
+struct HsvMaterial {
     #[uniform(0)]
     color: LinearRgba,
+    #[uniform(1)]
+    value: f32,
 }
 
-impl Material2d for HslMaterial {
+impl Material2d for HsvMaterial {
     fn fragment_shader() -> ShaderRef {
-        "shaders/hsl.wgsl".into()
+        "shaders/hsv.wgsl".into()
     }
 }

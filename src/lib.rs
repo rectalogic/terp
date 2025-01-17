@@ -18,14 +18,14 @@ enum AppState {
 #[derive(Resource, Copy, Clone)]
 struct Brush {
     radius: f32,
-    color: Hsla,
+    color: Hsva,
 }
 
 impl Default for Brush {
     fn default() -> Self {
         Self {
             radius: 10.,
-            color: Hsla::WHITE,
+            color: Hsva::WHITE,
         }
     }
 }

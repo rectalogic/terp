@@ -1,6 +1,6 @@
 use bevy::{
     ecs::query::QueryEntityError,
-    input::common_conditions::{input_just_pressed, input_just_released, input_pressed},
+    input::common_conditions::{input_just_released, input_pressed},
     prelude::*,
     render::view::RenderLayers,
     window::PrimaryWindow,

@@ -1,5 +1,5 @@
 use bevy::{
-    input::common_conditions::{input_just_pressed, input_just_released, input_pressed},
+    input::common_conditions::{input_just_released, input_pressed},
     prelude::*,
     window::PrimaryWindow,
 };
@@ -18,7 +18,7 @@ pub(super) fn plugin(app: &mut App) {
         (
             start_resize
                 .run_if(in_state(AppState::Idle))
-                .run_if(run_if_shift_ctrl),
+                .run_if(run_if_shift_click),
             (
                 resize.run_if(input_pressed(MouseButton::Left)),
                 end_resize.run_if(input_just_released(MouseButton::Left)),
@@ -30,12 +30,13 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-fn run_if_shift_ctrl(
+fn run_if_shift_click(
     buttons: Res<ButtonInput<MouseButton>>,
     keys: Res<ButtonInput<KeyCode>>,
 ) -> bool {
     buttons.just_pressed(MouseButton::Left)
         && keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight])
+        && !keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
 }
 
 fn setup(

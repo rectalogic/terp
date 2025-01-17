@@ -64,8 +64,10 @@ fn start_resize(
     let (camera, camera_transform) = *camera_query;
     let (brush_entity, mut brush_transform) = brush_control.into_inner();
     if let Some(world_position) = window_to_world(*window, camera, camera_transform) {
-        *brush_transform = Transform::from_translation(Vec3::from((world_position, 0.)))
-            .with_scale(Vec3::splat(brush.radius));
+        *brush_transform = Transform::from_translation(
+            Vec3::from((world_position, 0.)) - Vec3::new(brush.radius, -brush.radius, 0.),
+        )
+        .with_scale(Vec3::splat(brush.radius * 2.0));
         commands.entity(brush_entity).insert(Visibility::Visible);
         next_state.set(AppState::BrushSize);
     }
@@ -87,7 +89,7 @@ fn resize(
                 .transform_point(Vec3::ZERO)
                 .distance(Vec3::from((world_position, 0.)));
             brush.radius = scale;
-            brush_transform.scale = Vec3::splat(scale);
+            brush_transform.scale = Vec3::splat(scale) * 2.0;
         };
     }
 }

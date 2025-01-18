@@ -57,13 +57,20 @@ fn setup(
 fn start_resize(
     mut commands: Commands,
     mut next_state: ResMut<NextState<AppState>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     brush: Res<Brush>,
-    brush_control: Single<(Entity, &mut Transform), With<BrushSizeControl>>,
+    brush_control: Single<
+        (Entity, &mut Transform, &MeshMaterial2d<ColorMaterial>),
+        With<BrushSizeControl>,
+    >,
     window: Single<&Window, With<PrimaryWindow>>,
     camera_query: Single<(&Camera, &GlobalTransform), Without<Interpolated>>,
 ) {
     let (camera, camera_transform) = *camera_query;
-    let (brush_entity, mut brush_transform) = brush_control.into_inner();
+    let (brush_entity, mut brush_transform, brush_material) = brush_control.into_inner();
+    if let Some(material) = materials.get_mut(brush_material) {
+        material.color = brush.color.into();
+    }
     if let Some(world_position) = window_to_world(*window, camera, camera_transform) {
         *brush_transform = Transform::from_translation(
             Vec3::from((world_position, 0.)) - Vec3::new(brush.radius, -brush.radius, 0.),

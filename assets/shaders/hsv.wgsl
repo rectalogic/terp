@@ -6,6 +6,11 @@ var<uniform> color: vec4f;
 @group(2) @binding(1)
 var<uniform> value: f32;
 
+// https://www.shadertoy.com/view/ldfSDj
+fn round_rect(p: vec2f, center: vec2f, radius: f32) -> f32 {
+    return length(max(abs(p) - center + radius, vec2f(0.0))) - radius;
+}
+
 // https://github.com/bevyengine/bevy/discussions/8937
 // https://github.com/bevyengine/bevy/blob/b66c3ceb0ee39374ff1759ffb1b5bee2e4b93e99/crates/bevy_color/src/srgba.rs#L211
 fn to_linear(nonlinear: vec3f) -> vec3f {
@@ -17,6 +22,15 @@ fn to_linear(nonlinear: vec3f) -> vec3f {
 
 @fragment
 fn fragment(input: VertexOutput) -> @location(0) vec4f {
+    // Rounded rect
+    // seee https://www.shadertoy.com/view/ldfSDj
+    const center = vec2f(0.5);
+    const corner_radius = 0.1;
+    let b = round_rect(input.uv - center, center, corner_radius);
+    if (b > 0.0) {
+        discard;
+    }
+
     // Use polar coordinates instead of cartesian
     let coord = vec2f(0.5) - input.uv;
     let angle = atan2(coord.y, coord.x);

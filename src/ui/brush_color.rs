@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::{
     input::common_conditions::{input_just_released, input_pressed},
     prelude::*,
@@ -92,31 +94,26 @@ fn select_color(
     mut cursor: EventReader<CursorMoved>,
     mut brush: ResMut<Brush>,
     brush_control: Single<
-        (
-            &GlobalTransform,
-            &MeshMaterial2d<HsvMaterial>,
-            &mut Transform,
-        ),
+        (&GlobalTransform, &MeshMaterial2d<HsvMaterial>),
         With<BrushColorControl>,
     >,
     mut materials: ResMut<Assets<HsvMaterial>>,
     camera_query: Single<(&Camera, &GlobalTransform), Without<Interpolated>>,
 ) {
     let (camera, camera_transform) = *camera_query;
-    let (brush_global_transform, brush_material, brush_transform) = brush_control.into_inner();
+    let (brush_global_transform, brush_material) = brush_control.into_inner();
     for moved in cursor.read() {
         if let Some(world_position) =
             window_position_to_world(camera, camera_transform, moved.position)
         {
-            //XXX figure distance and angle to origin - convert to HSL
-            //XXX position at pointer, offset so current color is selected
             let origin = brush_global_transform.transform_point(Vec3::ZERO).xy();
-            let up = brush_global_transform.transform_point(Vec3::Y).xy();
-            let distance = world_position.distance(origin);
-            let angle = world_position.angle_to(up);
+            let right = brush_global_transform.transform_point(Vec3::X).xy();
+            let distance = (world_position.distance(origin) / RADIUS).clamp(0.0, 1.0);
+            let angle = ((origin - world_position).angle_to(origin - right) + PI).to_degrees();
 
             if let Some(material) = materials.get_mut(brush_material) {
-                material.color = brush.color.into(); //XXX set to selected color computed above
+                brush.color = Hsva::hsv(angle, distance, brush.color.value);
+                material.color = brush.color.into();
             }
         };
     }

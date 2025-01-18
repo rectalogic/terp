@@ -104,14 +104,9 @@ fn start_drawing(
                     ))])))),
                     MeshMaterial2d(materials.add(PointsMaterial {
                         settings: PointsSettings {
-                            // XXX brush.color.into()
-                            color: LinearRgba::rgb(
-                                window_position.x / window.width(),
-                                window_position.y / window.height(),
-                                1.0,
-                            ),
+                            color: brush.color.into(),
                             radius: brush.radius,
-                            target_color: LinearRgba::rgb(1., 1., 1.),
+                            target_color: brush.color.into(),
                             target_radius: brush.radius,
                             t: 0.0,
                         },

@@ -45,7 +45,7 @@ impl Plugin for AppPlugin {
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Terp".into(),
-                    resolution: (800., 400.).into(),
+                    resolution: (1200., 600.).into(),
                     ..default()
                 }),
                 ..default()

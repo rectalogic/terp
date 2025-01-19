@@ -80,8 +80,13 @@ fn start_select_color(
     let (camera, camera_transform) = *camera_query;
     let (brush_entity, brush_material, mut brush_transform) = brush_control.into_inner();
     if let Some(world_position) = window_to_world(*window, camera, camera_transform) {
-        //XXX offset so mouse is over current color (angle/distance)
-        *brush_transform = Transform::from_translation(Vec3::from((world_position, 0.)));
+        // Position the picker so mouse is over currently selected color
+        let angle = brush.color.hue.to_radians() + PI;
+        let distance = brush.color.saturation * RADIUS;
+        let offset = Vec2::from_angle(-angle) * -distance;
+        let brush_point = world_position + offset;
+
+        *brush_transform = Transform::from_translation(Vec3::from((brush_point, 0.)));
         if let Some(material) = materials.get_mut(brush_material) {
             material.color = brush.color.into();
         }

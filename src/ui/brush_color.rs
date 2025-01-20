@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy::{
+    asset::embedded_asset,
     input::common_conditions::{input_just_released, input_pressed},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
@@ -36,6 +37,7 @@ pub(super) fn plugin(app: &mut App) {
                 .chain(),
         )
         .add_plugins(Material2dPlugin::<HsvMaterial>::default());
+    embedded_asset!(app, "shaders/hsv.wgsl")
 }
 
 fn run_if_ctrl_click(
@@ -143,6 +145,11 @@ struct HsvMaterial {
 
 impl Material2d for HsvMaterial {
     fn fragment_shader() -> ShaderRef {
-        "shaders/hsv.wgsl".into()
+        concat!(
+            "embedded://",
+            env!("CARGO_PKG_NAME"),
+            "/ui/shaders/hsv.wgsl"
+        )
+        .into()
     }
 }

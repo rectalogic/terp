@@ -1,5 +1,4 @@
 use bevy::{
-    color::palettes::basic::*,
     prelude::*,
     render::{camera::Viewport, view::RenderLayers},
 };

@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use bevy::{
-    asset::RenderAssetUsages,
+    asset::{embedded_asset, RenderAssetUsages},
     prelude::*,
     render::{
         mesh::{MeshVertexAttribute, VertexAttributeValues},
@@ -12,6 +12,7 @@ use bevy::{
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(Material2dPlugin::<PointsMaterial>::default());
+    embedded_asset!(app, "shaders/points.wgsl")
 }
 
 pub(crate) const ATTRIBUTE_TARGET_POSITION: MeshVertexAttribute =
@@ -40,12 +41,18 @@ pub(crate) struct PointsMaterial {
     pub(crate) settings: PointsSettings,
 }
 
+const SHADER_PATH: &str = concat!(
+    "embedded://",
+    env!("CARGO_PKG_NAME"),
+    "/shaders/points.wgsl"
+);
+
 impl Material2d for PointsMaterial {
     fn vertex_shader() -> ShaderRef {
-        "shaders/points.wgsl".into()
+        SHADER_PATH.into()
     }
     fn fragment_shader() -> ShaderRef {
-        "shaders/points.wgsl".into()
+        SHADER_PATH.into()
     }
     fn specialize(
         descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,

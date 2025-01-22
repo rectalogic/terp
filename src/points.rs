@@ -28,7 +28,7 @@ pub(crate) struct PointsSettings {
 #[derive(Asset, TypePath, AsBindGroup, Debug, Copy, Clone)]
 pub(crate) struct PointsMaterial {
     #[uniform(0)]
-    pub(crate) settings: PointsSettings,
+    pub(crate) source_settings: PointsSettings,
     #[uniform(1)]
     pub(crate) target_settings: PointsSettings,
     #[uniform(2)]

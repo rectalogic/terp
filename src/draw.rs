@@ -103,7 +103,7 @@ fn start_drawing(
                         count as f32, // use count as Z index
                     ))])))),
                     MeshMaterial2d(materials.add(PointsMaterial {
-                        settings: PointsSettings {
+                        source_settings: PointsSettings {
                             color: brush.color.into(),
                             radius: brush.radius,
                         },
@@ -173,7 +173,7 @@ fn end_drawing(
             Points::interpolate(&mut source_mesh, &target_mesh);
             let mesh_handle = meshes.add(source_mesh);
 
-            source_material.target_settings = target_material.settings;
+            source_material.target_settings = target_material.source_settings;
             source_material.t = 0.0;
             target_material = source_material;
             target_material.t = 1.0;

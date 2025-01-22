@@ -23,7 +23,7 @@ struct PointsSettings {
     radius: f32,
 };
 @group(2) @binding(0)
-var<uniform> settings: PointsSettings;
+var<uniform> source_settings: PointsSettings;
 #ifdef INTERPOLATED
 @group(2) @binding(1)
 var<uniform> target_settings: PointsSettings;
@@ -48,15 +48,15 @@ fn vertex(vertex: VertexInput) -> VertexOutput {
     let index = vertex.vertex_index % 3;
 
 #ifdef INTERPOLATED
-    let scale = 2.0 * mix(settings.radius, target_settings.radius, t) * sqrt(3.0);
+    let scale = 2.0 * mix(source_settings.radius, target_settings.radius, t) * sqrt(3.0);
     let position = mix(vertex.position, vertex.target_position, t) + (triangle[index] * scale);
-    out.color = mix(settings.color, target_settings.color, t);
+    out.color = mix(source_settings.color, target_settings.color, t);
 #else
     // Height of triangle containing a circle of radius 'r' is '3r'
     // Compute scale of equilateral triangle of side length 1 to achieve desired radius
-    let scale = 2.0 * settings.radius * sqrt(3.0);
+    let scale = 2.0 * source_settings.radius * sqrt(3.0);
     let position = vertex.position + (triangle[index] * scale);
-    out.color = settings.color;
+    out.color = source_settings.color;
 #endif
 
     let world_from_local = mesh_functions::get_world_from_local(vertex.instance_index);

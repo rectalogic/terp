@@ -6,5 +6,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.95"
 bevy = { version = "0.15.1" }
+clap = { version = "4.5.27", features = ["derive"] }
 flexbuffers = "25.1.21"
 serde = "1.0.217"

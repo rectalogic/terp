@@ -2,6 +2,7 @@ use bevy::{app::App, prelude::*, DefaultPlugins};
 
 mod animation;
 mod camera;
+mod cli;
 mod draw;
 mod points;
 mod project;
@@ -56,6 +57,8 @@ impl Plugin for AppPlugin {
             draw::plugin,
             animation::plugin,
             ui::plugin,
+            cli::plugin,
+            project::plugin,
         ))
         .insert_resource(Brush::default())
         .insert_state(AppState::Idle);

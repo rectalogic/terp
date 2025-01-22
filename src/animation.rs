@@ -53,7 +53,7 @@ fn update_times(
 ) {
     for material in &animation_query {
         if let Some(material) = points_materials.get_mut(material) {
-            material.settings.t = time;
+            material.t = time;
         }
     }
 }

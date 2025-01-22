@@ -21,14 +21,15 @@ struct VertexOutput {
 struct PointsSettings {
     color: vec4f,
     radius: f32,
-#ifdef INTERPOLATED
-    target_color: vec4f,
-    target_radius: f32,
-    t: f32,
-#endif
 };
 @group(2) @binding(0)
 var<uniform> settings: PointsSettings;
+#ifdef INTERPOLATED
+@group(2) @binding(1)
+var<uniform> target_settings: PointsSettings;
+@group(2) @binding(2)
+var<uniform> t: f32;
+#endif
 
 // Radius is 1.0*sqrt(3)/6
 const radius = sqrt(3.0) / 6.0;
@@ -47,9 +48,9 @@ fn vertex(vertex: VertexInput) -> VertexOutput {
     let index = vertex.vertex_index % 3;
 
 #ifdef INTERPOLATED
-    let scale = 2.0 * mix(settings.radius, settings.target_radius, settings.t) * sqrt(3.0);
-    let position = mix(vertex.position, vertex.target_position, settings.t) + (triangle[index] * scale);
-    out.color = mix(settings.color, settings.target_color, settings.t);
+    let scale = 2.0 * mix(settings.radius, target_settings.radius, t) * sqrt(3.0);
+    let position = mix(vertex.position, vertex.target_position, t) + (triangle[index] * scale);
+    out.color = mix(settings.color, target_settings.color, t);
 #else
     // Height of triangle containing a circle of radius 'r' is '3r'
     // Compute scale of equilateral triangle of side length 1 to achieve desired radius

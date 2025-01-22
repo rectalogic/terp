@@ -4,6 +4,7 @@ mod animation;
 mod camera;
 mod draw;
 mod points;
+mod project;
 mod ui;
 mod util;
 

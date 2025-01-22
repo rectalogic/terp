@@ -9,6 +9,7 @@ use bevy::{
     },
     sprite::{Material2d, Material2dPlugin},
 };
+use serde::{Deserialize, Serialize};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(Material2dPlugin::<PointsMaterial>::default());
@@ -18,27 +19,20 @@ pub(super) fn plugin(app: &mut App) {
 pub(crate) const ATTRIBUTE_TARGET_POSITION: MeshVertexAttribute =
     MeshVertexAttribute::new("TargetPosition", 978541968, VertexFormat::Float32x3);
 
-#[derive(Debug, Copy, Clone, Default, ShaderType)]
+#[derive(Debug, Copy, Clone, Default, ShaderType, Serialize, Deserialize)]
 pub(crate) struct PointsSettings {
     pub color: LinearRgba,
     pub radius: f32,
-    pub target_color: LinearRgba,
-    pub target_radius: f32,
-    pub t: f32,
 }
 
-impl PointsSettings {
-    pub(crate) fn interpolated(&mut self, target: &Self) {
-        self.target_color = target.color;
-        self.target_radius = target.radius;
-        self.t = 0.0;
-    }
-}
-
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+#[derive(Asset, TypePath, AsBindGroup, Debug, Copy, Clone)]
 pub(crate) struct PointsMaterial {
     #[uniform(0)]
     pub(crate) settings: PointsSettings,
+    #[uniform(1)]
+    pub(crate) target_settings: PointsSettings,
+    #[uniform(2)]
+    pub(crate) t: f32,
 }
 
 const SHADER_PATH: &str = concat!(

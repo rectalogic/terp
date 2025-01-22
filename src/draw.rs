@@ -106,10 +106,12 @@ fn start_drawing(
                         settings: PointsSettings {
                             color: brush.color.into(),
                             radius: brush.radius,
-                            target_color: brush.color.into(),
-                            target_radius: brush.radius,
-                            t: 0.0,
                         },
+                        target_settings: PointsSettings {
+                            color: brush.color.into(),
+                            radius: brush.radius,
+                        },
+                        t: 0.0,
                     })),
                 ));
 
@@ -171,11 +173,10 @@ fn end_drawing(
             Points::interpolate(&mut source_mesh, &target_mesh);
             let mesh_handle = meshes.add(source_mesh);
 
-            source_material
-                .settings
-                .interpolated(&target_material.settings);
-            target_material.settings = source_material.settings;
-            target_material.settings.t = 1.0;
+            source_material.target_settings = target_material.settings;
+            source_material.t = 0.0;
+            target_material = source_material;
+            target_material.t = 1.0;
 
             commands
                 .entity(target_entity)

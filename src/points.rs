@@ -67,6 +67,7 @@ impl Material2d for PointsMaterial {
 
 #[derive(Clone)]
 pub(crate) struct Points(pub Vec<Vec3>);
+pub(crate) struct PointsPair(pub Points, pub Points);
 
 impl Points {
     pub(crate) fn append(mesh: &mut Mesh, point: Vec3) {
@@ -144,14 +145,9 @@ impl Points {
     }
 }
 
-impl From<Points> for Mesh {
+impl From<Points> for VertexAttributeValues {
     fn from(points: Points) -> Self {
-        Mesh::new(
-            bevy::render::mesh::PrimitiveTopology::TriangleList,
-            RenderAssetUsages::default(),
-        )
-        .with_inserted_attribute(
-            Mesh::ATTRIBUTE_POSITION,
+        VertexAttributeValues::Float32x3(
             points
                 .0
                 .iter()
@@ -160,8 +156,63 @@ impl From<Points> for Mesh {
                     let p = p.to_array();
                     [p, p, p]
                 })
-                .collect::<Vec<[f32; 3]>>(),
+                .collect(),
         )
+    }
+}
+
+impl TryFrom<&VertexAttributeValues> for Points {
+    type Error = &'static str;
+
+    fn try_from(vertices: &VertexAttributeValues) -> Result<Self, Self::Error> {
+        match vertices {
+            VertexAttributeValues::Float32x3(points) => Ok(Points(
+                points
+                    .into_iter()
+                    .step_by(3)
+                    .map(|p| Vec3::from(*p))
+                    .collect(),
+            )),
+            _ => Err("Unsupported vertex type"),
+        }
+    }
+}
+
+impl From<Points> for Mesh {
+    fn from(points: Points) -> Self {
+        Mesh::new(
+            bevy::render::mesh::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, points)
+    }
+}
+
+impl From<PointsPair> for Mesh {
+    fn from(pair: PointsPair) -> Self {
+        Mesh::new(
+            bevy::render::mesh::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, pair.0)
+        .with_inserted_attribute(ATTRIBUTE_TARGET_POSITION, pair.1)
+    }
+}
+
+impl TryFrom<&Mesh> for PointsPair {
+    type Error = &'static str;
+
+    fn try_from(mesh: &Mesh) -> Result<Self, Self::Error> {
+        Ok(PointsPair(
+            Points::try_from(
+                mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+                    .ok_or("No position attribute")?,
+            )?,
+            Points::try_from(
+                mesh.attribute(ATTRIBUTE_TARGET_POSITION)
+                    .ok_or("No target position attribute")?,
+            )?,
+        ))
     }
 }
 

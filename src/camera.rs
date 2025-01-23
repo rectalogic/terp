@@ -16,6 +16,18 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(Update, update_camera_viewports);
 }
 
+pub(super) fn player_plugin(app: &mut App) {
+    app.add_systems(Startup, setup_player_camera);
+}
+
+fn setup_player_camera(mut commands: Commands) {
+    commands.spawn((
+        Camera2d,
+        RenderLayers::layer(SOURCE_LAYER),
+        Interpolated::Source,
+    ));
+}
+
 fn setup_cameras(mut commands: Commands) {
     // Splitscreen cameras
     commands.spawn((

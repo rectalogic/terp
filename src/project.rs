@@ -25,6 +25,10 @@ pub(super) fn plugin(app: &mut App) {
         );
 }
 
+pub(super) fn player_plugin(app: &mut App) {
+    app.add_systems(Startup, load_project.pipe(error_handler));
+}
+
 #[derive(Serialize, Deserialize)]
 struct Project {
     drawings: Vec<Drawing>,

@@ -39,9 +39,9 @@ enum Interpolated {
     Target,
 }
 
-pub struct AppPlugin;
+pub struct EditorPlugin;
 
-impl Plugin for AppPlugin {
+impl Plugin for EditorPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
             DefaultPlugins.set(WindowPlugin {
@@ -61,6 +61,29 @@ impl Plugin for AppPlugin {
             project::plugin,
         ))
         .insert_resource(Brush::default())
+        .insert_state(AppState::Idle);
+    }
+}
+
+pub struct PlayerPlugin;
+
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Terp Player".into(),
+                    resolution: (600., 600.).into(),
+                    ..default()
+                }),
+                ..default()
+            }),
+            camera::player_plugin,
+            points::plugin,
+            animation::player_plugin,
+            cli::player_plugin,
+            project::player_plugin,
+        ))
         .insert_state(AppState::Idle);
     }
 }

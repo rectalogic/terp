@@ -13,6 +13,11 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+pub(super) fn player_plugin(app: &mut App) {
+    app.insert_resource(Animation::default())
+        .add_systems(Update, animate);
+}
+
 #[derive(Resource)]
 struct Animation {
     animating: bool,

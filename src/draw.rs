@@ -1,9 +1,6 @@
 use bevy::{
-    ecs::query::QueryEntityError,
-    input::common_conditions::{input_just_released, input_pressed},
-    prelude::*,
-    render::view::RenderLayers,
-    window::PrimaryWindow,
+    ecs::query::QueryEntityError, input::common_conditions::input_just_released, prelude::*,
+    render::view::RenderLayers, window::PrimaryWindow,
 };
 
 use crate::{
@@ -19,9 +16,9 @@ pub(super) fn plugin(app: &mut App) {
         (
             start_drawing
                 .run_if(in_state(AppState::Idle))
-                .run_if(run_if_pressed),
+                .run_if(run_if_start_drawing),
             (
-                draw.run_if(input_pressed(MouseButton::Left)),
+                draw.run_if(run_if_draw),
                 end_drawing.run_if(input_just_released(MouseButton::Left)),
             )
                 .run_if(in_state(AppState::Draw))
@@ -45,7 +42,11 @@ struct DrawingNumber {
     count: usize,
 }
 
-fn run_if_pressed(buttons: Res<ButtonInput<MouseButton>>, keys: Res<ButtonInput<KeyCode>>) -> bool {
+fn run_if_start_drawing(
+    buttons: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
+) -> bool {
+    // Left button with no modifiers (since they are used for brush configuration)
     buttons.just_pressed(MouseButton::Left)
         && !keys.any_pressed([
             KeyCode::ShiftLeft,
@@ -53,6 +54,11 @@ fn run_if_pressed(buttons: Res<ButtonInput<MouseButton>>, keys: Res<ButtonInput<
             KeyCode::ControlLeft,
             KeyCode::ControlRight,
         ])
+}
+
+fn run_if_draw(buttons: Res<ButtonInput<MouseButton>>, keys: Res<ButtonInput<KeyCode>>) -> bool {
+    // Discontiguous drawing, hold Alt (Option) to move without drawing
+    buttons.pressed(MouseButton::Left) && !keys.any_pressed([KeyCode::AltLeft, KeyCode::AltRight])
 }
 
 #[allow(clippy::too_many_arguments)]

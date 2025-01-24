@@ -1,8 +1,9 @@
 use bevy::{app::App, prelude::*, DefaultPlugins};
+use cli::Args;
 
 mod animation;
 mod camera;
-mod cli;
+pub mod cli;
 mod draw;
 mod points;
 mod project;
@@ -39,51 +40,53 @@ enum Interpolated {
     Target,
 }
 
-pub struct EditorPlugin;
-
-impl Plugin for EditorPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Terp".into(),
-                    resolution: (1200., 600.).into(),
-                    ..default()
-                }),
-                ..default()
-            }),
-            camera::plugin,
-            points::plugin,
-            draw::plugin,
-            animation::plugin,
-            ui::plugin,
-            cli::plugin,
-            project::plugin,
-        ))
-        .insert_resource(Brush::default())
-        .insert_state(AppState::Idle);
-    }
+pub enum AppPlugin {
+    Editor(Args),
+    Player(Args),
 }
 
-pub struct PlayerPlugin;
-
-impl Plugin for PlayerPlugin {
+impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Terp Player".into(),
-                    resolution: (600., 600.).into(),
-                    ..default()
-                }),
-                ..default()
-            }),
-            camera::player_plugin,
-            points::plugin,
-            animation::player_plugin,
-            cli::player_plugin,
-            project::player_plugin,
-        ))
-        .insert_state(AppState::Idle);
+        match self {
+            AppPlugin::Editor(args) => {
+                app.add_plugins((
+                    DefaultPlugins.set(WindowPlugin {
+                        primary_window: Some(Window {
+                            title: "Terp".into(),
+                            resolution: (1200., 600.).into(),
+                            ..default()
+                        }),
+                        ..default()
+                    }),
+                    camera::plugin,
+                    points::plugin,
+                    draw::plugin,
+                    animation::plugin,
+                    ui::plugin,
+                    project::plugin,
+                ))
+                .insert_resource(Brush::default())
+                .insert_state(AppState::Idle)
+                .insert_resource(args.clone());
+            }
+            AppPlugin::Player(args) => {
+                app.add_plugins((
+                    DefaultPlugins.set(WindowPlugin {
+                        primary_window: Some(Window {
+                            title: "Terp Player".into(),
+                            resolution: (600., 600.).into(),
+                            ..default()
+                        }),
+                        ..default()
+                    }),
+                    camera::player_plugin,
+                    points::plugin,
+                    animation::player_plugin,
+                    project::player_plugin,
+                ))
+                .insert_state(AppState::Idle)
+                .insert_resource(args.clone());
+            }
+        }
     }
 }

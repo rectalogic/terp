@@ -1,45 +1,53 @@
+use crate::AppPlugin;
 use bevy::prelude::*;
 use clap::{Arg, Command, ValueHint};
 use std::path::PathBuf;
 
-pub(super) fn plugin(app: &mut App) {
-    let c = command().arg(
-        Arg::new("project")
-            .short('p')
-            .long("project")
-            .value_hint(ValueHint::FilePath),
-    );
-    app.insert_resource(Args::new(c));
+pub fn parse_cli() -> AppPlugin {
+    let matches = Command::new(clap::crate_name!())
+        .version(clap::crate_version!())
+        .propagate_version(true)
+        .subcommand_required(false)
+        .arg_required_else_help(false)
+        .subcommand(
+            Command::new("editor").arg(
+                Arg::new("project")
+                    .short('p')
+                    .long("project")
+                    .value_hint(ValueHint::FilePath),
+            ),
+        )
+        .subcommand(
+            Command::new("player").arg(
+                Arg::new("project")
+                    .required(true)
+                    .value_hint(ValueHint::FilePath),
+            ),
+        )
+        .get_matches();
+
+    match matches.subcommand() {
+        Some(("editor", editor_matches)) => {
+            AppPlugin::Editor(Args::new(editor_matches.get_one::<String>("project")))
+        }
+        Some(("player", player_matches)) => {
+            AppPlugin::Player(Args::new(player_matches.get_one::<String>("project")))
+        }
+        None => AppPlugin::Editor(Args::new(None)),
+        _ => unreachable!("All commands covered"),
+    }
 }
 
-pub(super) fn player_plugin(app: &mut App) {
-    let c = command().arg(
-        Arg::new("project")
-            .required(true)
-            .value_hint(ValueHint::FilePath),
-    );
-    //XXX clap should panic if not set?
-    app.insert_resource(Args::new(c));
-}
-
-fn command() -> Command {
-    Command::new(clap::crate_name!()).version(clap::crate_version!())
-}
-
-#[derive(Resource, Debug)]
+#[derive(Resource, Clone, Debug)]
 pub struct Args {
     /// Project file
     project: Option<PathBuf>,
 }
 
 impl Args {
-    fn new(command: Command) -> Self {
-        if let Some(project) = command.get_matches().get_one::<String>("project") {
-            Self {
-                project: Some(project.into()),
-            }
-        } else {
-            Self { project: None }
+    fn new(project: Option<&String>) -> Self {
+        Self {
+            project: project.map(|p| p.into()),
         }
     }
     pub fn project(&self) -> Option<&std::path::Path> {

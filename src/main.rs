@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use terp::EditorPlugin;
+use terp::cli;
 
 fn main() {
-    App::new().add_plugins(EditorPlugin).run();
+    App::new().add_plugins(cli::parse_cli()).run();
 }

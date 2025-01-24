@@ -11,7 +11,7 @@ Drag in left or right viewport to draw. Corresponding left/right drawings will b
 * `Shift`-drag to set brush size
 * `Ctrl`-drag to set brush color
 * `Spacebar` to toggle interpolation
-* `S` to save project (if run with `terp --project .../path/to/project.terp`)
+* `S` to save project (if run with `terp editor --project .../path/to/project.terp`)
 
 ---
 

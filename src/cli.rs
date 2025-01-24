@@ -1,9 +1,9 @@
-use crate::AppPlugin;
+use crate::app;
 use bevy::prelude::*;
 use clap::{Arg, Command, ValueHint};
 use std::path::PathBuf;
 
-pub fn parse_cli() -> AppPlugin {
+pub fn parse_cli() -> app::AppPlugin {
     let matches = Command::new(clap::crate_name!())
         .version(clap::crate_version!())
         .propagate_version(true)
@@ -28,12 +28,12 @@ pub fn parse_cli() -> AppPlugin {
 
     match matches.subcommand() {
         Some(("editor", editor_matches)) => {
-            AppPlugin::Editor(Args::new(editor_matches.get_one::<String>("project")))
+            app::AppPlugin::Editor(Args::new(editor_matches.get_one::<String>("project")))
         }
         Some(("player", player_matches)) => {
-            AppPlugin::Player(Args::new(player_matches.get_one::<String>("project")))
+            app::AppPlugin::Player(Args::new(player_matches.get_one::<String>("project")))
         }
-        None => AppPlugin::Editor(Args::new(None)),
+        None => app::AppPlugin::Editor(Args::new(None)),
         _ => unreachable!("All commands covered"),
     }
 }

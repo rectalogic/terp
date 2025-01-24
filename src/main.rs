@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::prelude::App;
 use terp::cli;
 
 fn main() {

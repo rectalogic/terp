@@ -6,7 +6,7 @@ mod camera;
 pub mod cli;
 mod draw;
 mod points;
-mod project;
+pub mod project;
 mod ui;
 mod util;
 

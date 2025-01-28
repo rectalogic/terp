@@ -7,6 +7,18 @@ pub enum AppPlugin {
     Player(cli::Args),
 }
 
+impl AppPlugin {
+    pub fn run(self) -> AppExit {
+        App::new().add_plugins(self).run()
+    }
+    pub fn run_with_event(self, event: impl Event) -> AppExit {
+        let mut app = App::new();
+        app.add_plugins(self);
+        app.world_mut().send_event(event);
+        app.run()
+    }
+}
+
 fn title_suffix(title: &str, args: &cli::Args) -> String {
     if let Some(project) = args.project() {
         format!("{} - {}", title, project.display())

@@ -1,0 +1,11 @@
+// Folder-specific settings
+// https://zed.dev/docs/configuring-zed#settings-files
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "linkedProjects": ["./webgpu/Cargo.toml"]
+      }
+    }
+  }
+}

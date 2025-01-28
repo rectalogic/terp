@@ -1,0 +1,21 @@
+<html>
+    <head>
+        <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+    </head>
+    <body>
+        <script type="module">
+            import init, { play } from "./pkg/webgpu.js";
+
+            async function run() {
+                const response = await fetch("t.terp");
+                if (!response.ok) {
+                    throw new Error(`Response status: ${response.status}`);
+                }
+                await init();
+                const data = await response.bytes();
+                play(data);
+            }
+            run();
+        </script>
+    </body>
+</html>

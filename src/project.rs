@@ -16,17 +16,23 @@ use crate::{
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Startup, load_project.pipe(error_handler))
+    app.add_event::<LoadProject>()
+        .add_systems(Startup, read_project.pipe(error_handler))
         .add_systems(
             Update,
-            save_project
-                .pipe(error_handler)
-                .run_if(input_just_pressed(KeyCode::KeyS)),
+            (
+                load_project.pipe(error_handler),
+                save_project
+                    .pipe(error_handler)
+                    .run_if(input_just_pressed(KeyCode::KeyS)),
+            ),
         );
 }
 
 pub(super) fn player_plugin(app: &mut App) {
-    app.add_systems(Startup, load_project.pipe(error_handler));
+    app.add_event::<LoadProject>()
+        .add_systems(Startup, read_project.pipe(error_handler))
+        .add_systems(Update, load_project.pipe(error_handler));
 }
 
 #[derive(Serialize, Deserialize)]
@@ -42,47 +48,62 @@ struct Drawing {
     target_points: Vec<Vec3>,
 }
 
-fn load_project(
-    args: Res<cli::Args>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut points_materials: ResMut<Assets<PointsMaterial>>,
-) -> Result<()> {
+#[derive(Event)]
+pub struct LoadProject(Vec<u8>);
+
+impl LoadProject {
+    pub fn new(data: Vec<u8>) -> Self {
+        Self(data)
+    }
+}
+
+fn read_project(args: Res<cli::Args>, mut commands: Commands) -> Result<()> {
     let Some(path) = args.project() else {
         return Ok(());
     };
     if !path.exists() {
         return Ok(());
     }
-    let data = fs::read(path)?;
-    let reader = flexbuffers::Reader::get_root(&data[..])?;
-    let project = Project::deserialize(reader)?;
-    for drawing in project.drawings {
-        let mesh_handle = meshes.add(Mesh::from(PointsPair(
-            Points(drawing.source_points),
-            Points(drawing.target_points),
-        )));
-        commands.spawn((
-            Interpolated::Target,
-            RenderLayers::layer(TARGET_LAYER),
-            Mesh2d(mesh_handle.clone()),
-            MeshMaterial2d(points_materials.add(PointsMaterial {
-                source_settings: drawing.source_settings,
-                target_settings: drawing.target_settings,
-                t: 1.0,
-            })),
-        ));
-        commands.spawn((
-            Animatable,
-            Interpolated::Source,
-            RenderLayers::layer(SOURCE_LAYER),
-            Mesh2d(mesh_handle),
-            MeshMaterial2d(points_materials.add(PointsMaterial {
-                source_settings: drawing.source_settings,
-                target_settings: drawing.target_settings,
-                t: 0.0,
-            })),
-        ));
+    commands.send_event(LoadProject::new(fs::read(path)?));
+    Ok(())
+}
+
+fn load_project(
+    mut events: EventReader<LoadProject>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut points_materials: ResMut<Assets<PointsMaterial>>,
+) -> Result<()> {
+    for event in events.read() {
+        let reader = flexbuffers::Reader::get_root(event.0.as_slice())?;
+        let project = Project::deserialize(reader)?;
+        for drawing in project.drawings {
+            let mesh_handle = meshes.add(Mesh::from(PointsPair(
+                Points(drawing.source_points),
+                Points(drawing.target_points),
+            )));
+            commands.spawn((
+                Interpolated::Target,
+                RenderLayers::layer(TARGET_LAYER),
+                Mesh2d(mesh_handle.clone()),
+                MeshMaterial2d(points_materials.add(PointsMaterial {
+                    source_settings: drawing.source_settings,
+                    target_settings: drawing.target_settings,
+                    t: 1.0,
+                })),
+            ));
+            commands.spawn((
+                Animatable,
+                Interpolated::Source,
+                RenderLayers::layer(SOURCE_LAYER),
+                Mesh2d(mesh_handle),
+                MeshMaterial2d(points_materials.add(PointsMaterial {
+                    source_settings: drawing.source_settings,
+                    target_settings: drawing.target_settings,
+                    t: 0.0,
+                })),
+            ));
+        }
     }
     Ok(())
 }

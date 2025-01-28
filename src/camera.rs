@@ -1,4 +1,5 @@
 use bevy::{
+    ecs::query::QueryData,
     prelude::*,
     render::{camera::Viewport, view::RenderLayers},
 };
@@ -79,33 +80,46 @@ fn setup_cameras(mut commands: Commands) {
         });
 }
 
-#[allow(clippy::type_complexity)]
+#[derive(QueryData)]
+struct LayoutQuery {
+    interpolated: &'static Interpolated,
+    node: &'static ComputedNode,
+    global_transform: &'static GlobalTransform,
+}
+
+#[derive(QueryData)]
+#[query_data(mutable)]
+struct CameraQuery {
+    interpolated: &'static Interpolated,
+    camera: &'static mut Camera,
+}
+
 fn update_camera_viewports(
     layout_query: Query<
-        (&Interpolated, &ComputedNode, &GlobalTransform),
+        LayoutQuery,
         (
             With<CameraLayout>,
             Or<(Changed<ComputedNode>, Changed<GlobalTransform>)>,
         ),
     >,
-    mut camera_query: Query<(&Interpolated, &mut Camera), With<Interpolated>>,
+    mut camera_query: Query<CameraQuery, With<Interpolated>>,
 ) {
     // Resize camera's viewports to match their transformed layout size.
-    for (camera_interpolated, mut camera) in camera_query.iter_mut() {
-        for (layout_interpolated, layout_node, layout_global_transform) in layout_query.iter() {
-            if layout_node.is_empty() || camera_interpolated != layout_interpolated {
+    for mut camera in camera_query.iter_mut() {
+        for layout in layout_query.iter() {
+            if layout.node.is_empty() || camera.interpolated != layout.interpolated {
                 continue;
             }
-            let inset = layout_node.content_inset();
-            let size = layout_node.size();
+            let inset = layout.node.content_inset();
+            let size = layout.node.size();
             let size = Vec2::new(
                 size.x - (inset.left + inset.right),
                 size.y - (inset.top + inset.bottom),
             );
             // https://github.com/bevyengine/bevy/blob/5d0e9cfb36b2baab15e4c8a62bc40f77b5db1a88/crates/bevy_ui/src/focus.rs#L245
             let node_rect =
-                Rect::from_center_size(layout_global_transform.translation().truncate(), size);
-            camera.viewport = Some(Viewport {
+                Rect::from_center_size(layout.global_transform.translation().truncate(), size);
+            camera.camera.viewport = Some(Viewport {
                 physical_position: UVec2::new(node_rect.min.x as u32, node_rect.min.y as u32),
                 physical_size: UVec2::new(size.x as u32, size.y as u32),
                 ..default()

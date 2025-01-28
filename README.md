@@ -12,6 +12,7 @@ Corresponding left/right drawings will be interpolated.
 * `Shift`-drag to set brush size
 * `Ctrl`-drag to set brush color
 * `Spacebar` to toggle interpolation
+* `Backspace` to undo last drawing
 * `S` to save project (if run with `terp editor --project .../path/to/project.terp`)
 
 ---

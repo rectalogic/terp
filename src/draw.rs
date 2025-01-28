@@ -1,6 +1,9 @@
 use bevy::{
-    ecs::query::QueryEntityError, input::common_conditions::input_just_released, prelude::*,
-    render::view::RenderLayers, window::PrimaryWindow,
+    ecs::query::{QueryData, QueryEntityError},
+    input::common_conditions::{input_just_pressed, input_just_released},
+    prelude::*,
+    render::view::RenderLayers,
+    window::PrimaryWindow,
 };
 
 use crate::{
@@ -12,21 +15,27 @@ use crate::{
 
 pub(super) fn plugin(app: &mut App) {
     app.insert_resource(Brush::default())
+        .insert_resource(Undo::default())
         .insert_resource(DrawingCount::default())
         .add_systems(
             Update,
             (
-                start_drawing
-                    .run_if(in_state(AppState::Idle))
-                    .run_if(run_if_start_drawing),
+                undo_drawing
+                    .run_if(input_just_pressed(KeyCode::Backspace))
+                    .run_if(in_state(AppState::Idle)),
                 (
-                    draw.run_if(run_if_draw),
-                    end_drawing.run_if(input_just_released(MouseButton::Left)),
+                    start_drawing
+                        .run_if(in_state(AppState::Idle))
+                        .run_if(run_if_start_drawing),
+                    (
+                        draw.run_if(run_if_draw),
+                        end_drawing.run_if(input_just_released(MouseButton::Left)),
+                    )
+                        .run_if(in_state(AppState::Draw))
+                        .chain(),
                 )
-                    .run_if(in_state(AppState::Draw))
                     .chain(),
-            )
-                .chain(),
+            ),
         );
 }
 
@@ -49,6 +58,20 @@ impl Default for Brush {
 struct DrawingCount {
     source: usize,
     target: usize,
+}
+
+#[derive(Resource, Default)]
+struct Undo {
+    entities: Vec<Entity>,
+}
+
+impl Undo {
+    fn add(&mut self, entity: Entity) {
+        self.entities.push(entity);
+    }
+    fn undo(&mut self) -> Option<Entity> {
+        self.entities.pop()
+    }
 }
 
 #[derive(Component)]
@@ -84,6 +107,7 @@ fn start_drawing(
     mut next_state: ResMut<NextState<AppState>>,
     mut drawing_count: ResMut<DrawingCount>,
     brush: Res<Brush>,
+    mut undo: ResMut<Undo>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<PointsMaterial>>,
     window: Single<&Window, With<PrimaryWindow>>,
@@ -116,27 +140,31 @@ fn start_drawing(
             if let Some(world_position) =
                 window_position_to_world(camera, camera_transform, window_position)
             {
-                commands.spawn((
-                    ActiveDrawing,
-                    DrawingNumber { count },
-                    camera_render_layers.clone(),
-                    camera_interpolation_type.clone(),
-                    Mesh2d(meshes.add(Mesh::from(Points(vec![Vec3::from((
-                        world_position,
-                        count as f32, // use count as Z index
-                    ))])))),
-                    MeshMaterial2d(materials.add(PointsMaterial {
-                        source_settings: PointsSettings {
-                            color: brush.color.into(),
-                            radius: brush.radius,
-                        },
-                        target_settings: PointsSettings {
-                            color: brush.color.into(),
-                            radius: brush.radius,
-                        },
-                        t: 0.0,
-                    })),
-                ));
+                let entity = commands
+                    .spawn((
+                        ActiveDrawing,
+                        DrawingNumber { count },
+                        camera_render_layers.clone(),
+                        camera_interpolation_type.clone(),
+                        Mesh2d(meshes.add(Mesh::from(Points(vec![Vec3::from((
+                            world_position,
+                            count as f32, // use count as Z index
+                        ))])))),
+                        MeshMaterial2d(materials.add(PointsMaterial {
+                            source_settings: PointsSettings {
+                                color: brush.color.into(),
+                                radius: brush.radius,
+                            },
+                            target_settings: PointsSettings {
+                                color: brush.color.into(),
+                                radius: brush.radius,
+                            },
+                            t: 0.0,
+                        })),
+                    ))
+                    .id();
+
+                undo.add(entity);
 
                 next_state.set(AppState::Draw);
             }
@@ -144,29 +172,36 @@ fn start_drawing(
     }
 }
 
+#[derive(QueryData)]
+struct DrawingQuery {
+    entity: Entity,
+    number: &'static DrawingNumber,
+    interpolation: &'static Interpolated,
+}
+
 fn end_drawing(
     mut commands: Commands,
     mut next_state: ResMut<NextState<AppState>>,
-    active_drawing: Single<(Entity, &DrawingNumber, &Interpolated), With<ActiveDrawing>>,
-    unmerged_drawings: Query<(Entity, &DrawingNumber, &Interpolated), Without<ActiveDrawing>>,
+    active_drawing: Single<DrawingQuery, With<ActiveDrawing>>,
+    unmerged_drawings: Query<DrawingQuery, Without<ActiveDrawing>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut points_materials: ResMut<Assets<PointsMaterial>>,
     mesh_query: Query<(&Mesh2d, &MeshMaterial2d<PointsMaterial>), With<DrawingNumber>>,
 ) {
     next_state.set(AppState::Idle);
 
-    let (active_drawing, active_drawing_number, active_interpolation_type) = *active_drawing;
-    commands.entity(active_drawing).remove::<ActiveDrawing>();
+    let active_drawing = active_drawing.into_inner();
+    commands
+        .entity(active_drawing.entity)
+        .remove::<ActiveDrawing>();
     // Try to find a drawing of the opposite interpolation with the same number
-    for (unmerged_drawing, unmerged_drawing_number, unmerged_interpolation_type) in
-        &unmerged_drawings
-    {
-        if unmerged_drawing_number.count == active_drawing_number.count
-            && *unmerged_interpolation_type != *active_interpolation_type
+    for unmerged_drawing in &unmerged_drawings {
+        if unmerged_drawing.number.count == active_drawing.number.count
+            && unmerged_drawing.interpolation != active_drawing.interpolation
         {
-            let (source_entity, target_entity) = match *active_interpolation_type {
-                Interpolated::Source => (active_drawing, unmerged_drawing),
-                Interpolated::Target => (unmerged_drawing, active_drawing),
+            let (source_entity, target_entity) = match *active_drawing.interpolation {
+                Interpolated::Source => (active_drawing.entity, unmerged_drawing.entity),
+                Interpolated::Target => (unmerged_drawing.entity, active_drawing.entity),
             };
 
             let mut process_mesh_material = |result: Result<
@@ -244,5 +279,11 @@ fn draw(
                 };
             }
         }
+    }
+}
+
+fn undo_drawing(mut commands: Commands, mut undo: ResMut<Undo>) {
+    if let Some(entity) = undo.undo() {
+        commands.entity(entity).despawn();
     }
 }

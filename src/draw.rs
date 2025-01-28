@@ -7,25 +7,42 @@ use crate::{
     animation::Animatable,
     points::{Points, PointsMaterial, PointsSettings},
     util::window_position_to_world,
-    AppState, Brush, Interpolated,
+    AppState, Interpolated,
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.insert_resource(DrawingCount::default()).add_systems(
-        Update,
-        (
-            start_drawing
-                .run_if(in_state(AppState::Idle))
-                .run_if(run_if_start_drawing),
+    app.insert_resource(Brush::default())
+        .insert_resource(DrawingCount::default())
+        .add_systems(
+            Update,
             (
-                draw.run_if(run_if_draw),
-                end_drawing.run_if(input_just_released(MouseButton::Left)),
+                start_drawing
+                    .run_if(in_state(AppState::Idle))
+                    .run_if(run_if_start_drawing),
+                (
+                    draw.run_if(run_if_draw),
+                    end_drawing.run_if(input_just_released(MouseButton::Left)),
+                )
+                    .run_if(in_state(AppState::Draw))
+                    .chain(),
             )
-                .run_if(in_state(AppState::Draw))
                 .chain(),
-        )
-            .chain(),
-    );
+        );
+}
+
+#[derive(Resource, Copy, Clone)]
+pub(crate) struct Brush {
+    pub(crate) radius: f32,
+    pub(crate) color: Hsva,
+}
+
+impl Default for Brush {
+    fn default() -> Self {
+        Self {
+            radius: 10.,
+            color: Hsva::WHITE,
+        }
+    }
 }
 
 #[derive(Resource, Default)]

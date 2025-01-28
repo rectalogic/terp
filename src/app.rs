@@ -1,6 +1,6 @@
 use bevy::{app::App, prelude::*, DefaultPlugins};
 
-use crate::{animation, camera, cli, draw, points, project, ui, AppState, Brush};
+use crate::{animation, camera, cli, draw, points, project, ui, AppState};
 
 pub enum AppPlugin {
     Editor(cli::Args),
@@ -40,7 +40,6 @@ impl Plugin for AppPlugin {
                     ui::plugin,
                     project::plugin,
                 ))
-                .insert_resource(Brush::default())
                 .insert_state(AppState::Idle)
                 .insert_resource(args.clone());
             }

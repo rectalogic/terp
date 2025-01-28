@@ -5,8 +5,9 @@ use bevy::{
 };
 
 use crate::{
+    draw::Brush,
     util::{window_position_to_world, window_to_world},
-    AppState, Brush, Interpolated,
+    AppState, Interpolated,
 };
 
 #[derive(Component)]

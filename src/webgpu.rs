@@ -1,5 +1,7 @@
-use terp::{app::AppPlugin, cli::Args, project::LoadProject};
+use crate::{app::AppPlugin, cli::Args, project::LoadProject};
 use wasm_bindgen::prelude::*;
+
+// wasm-pack build --target web
 
 #[wasm_bindgen]
 pub fn play(data: Vec<u8>) {

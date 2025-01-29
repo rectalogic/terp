@@ -9,6 +9,8 @@ mod points;
 pub mod project;
 mod ui;
 mod util;
+#[cfg(target_arch = "wasm32")]
+mod webgpu;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
 enum AppState {

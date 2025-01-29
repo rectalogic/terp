@@ -3887,8 +3887,10 @@ dependencies = [
  "anyhow",
  "bevy",
  "clap",
+ "console_error_panic_hook",
  "flexbuffers",
  "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]

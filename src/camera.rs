@@ -9,8 +9,8 @@ use crate::Interpolated;
 #[derive(Component)]
 struct CameraLayout;
 
-pub(crate) const SOURCE_LAYER: usize = 1;
-pub(crate) const TARGET_LAYER: usize = 2;
+pub(crate) const SOURCE_LAYER: RenderLayers = RenderLayers::layer(1);
+pub(crate) const TARGET_LAYER: RenderLayers = RenderLayers::layer(2);
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, setup_cameras)
@@ -22,11 +22,7 @@ pub(super) fn player_plugin(app: &mut App) {
 }
 
 fn setup_player_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera2d,
-        RenderLayers::layer(SOURCE_LAYER),
-        Interpolated::Source,
-    ));
+    commands.spawn((Camera2d, SOURCE_LAYER, Interpolated::Source));
 }
 
 fn setup_cameras(mut commands: Commands) {
@@ -37,7 +33,7 @@ fn setup_cameras(mut commands: Commands) {
             order: 0,
             ..default()
         },
-        RenderLayers::layer(SOURCE_LAYER),
+        SOURCE_LAYER,
         Interpolated::Source,
     ));
     commands.spawn((
@@ -46,7 +42,7 @@ fn setup_cameras(mut commands: Commands) {
             order: 1,
             ..default()
         },
-        RenderLayers::layer(TARGET_LAYER),
+        TARGET_LAYER,
         Interpolated::Target,
     ));
     // Layout for cameras. We track Node layout with camera Viewport.

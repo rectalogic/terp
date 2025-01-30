@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::Result;
-use bevy::{input::common_conditions::input_just_pressed, prelude::*, render::view::RenderLayers};
+use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -84,7 +84,7 @@ fn load_project(
             )));
             commands.spawn((
                 Interpolated::Target,
-                RenderLayers::layer(TARGET_LAYER),
+                TARGET_LAYER,
                 Mesh2d(mesh_handle.clone()),
                 MeshMaterial2d(points_materials.add(PointsMaterial {
                     source_settings: drawing.source_settings,
@@ -95,7 +95,7 @@ fn load_project(
             commands.spawn((
                 Animatable,
                 Interpolated::Source,
-                RenderLayers::layer(SOURCE_LAYER),
+                SOURCE_LAYER,
                 Mesh2d(mesh_handle),
                 MeshMaterial2d(points_materials.add(PointsMaterial {
                     source_settings: drawing.source_settings,

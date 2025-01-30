@@ -23,18 +23,14 @@ pub(super) fn plugin(app: &mut App) {
                 undo_drawing
                     .run_if(input_just_pressed(KeyCode::Backspace))
                     .run_if(in_state(AppState::Idle)),
+                start_drawing
+                    .run_if(in_state(AppState::Idle))
+                    .run_if(run_if_start_drawing),
                 (
-                    start_drawing
-                        .run_if(in_state(AppState::Idle))
-                        .run_if(run_if_start_drawing),
-                    (
-                        draw.run_if(run_if_draw),
-                        end_drawing.run_if(input_just_released(MouseButton::Left)),
-                    )
-                        .run_if(in_state(AppState::Draw))
-                        .chain(),
+                    draw.run_if(run_if_draw),
+                    end_drawing.run_if(input_just_released(MouseButton::Left)),
                 )
-                    .chain(),
+                    .run_if(in_state(AppState::Draw)),
             ),
         );
 }

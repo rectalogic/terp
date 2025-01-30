@@ -24,10 +24,8 @@ pub(super) fn plugin(app: &mut App) {
                 resize.run_if(input_pressed(MouseButton::Left)),
                 end_resize.run_if(input_just_released(MouseButton::Left)),
             )
-                .run_if(in_state(AppState::BrushSize))
-                .chain(),
-        )
-            .chain(),
+                .run_if(in_state(AppState::BrushSize)),
+        ),
     );
 }
 

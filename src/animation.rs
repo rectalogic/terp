@@ -8,8 +8,7 @@ pub(super) fn plugin(app: &mut App) {
         (
             animate.run_if(animating),
             toggle_animation.run_if(input_just_pressed(KeyCode::Space)),
-        )
-            .chain(),
+        ),
     );
 }
 

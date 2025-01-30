@@ -32,10 +32,8 @@ pub(super) fn plugin(app: &mut App) {
                     select_color.run_if(input_pressed(MouseButton::Left)),
                     end_select_color.run_if(input_just_released(MouseButton::Left)),
                 )
-                    .run_if(in_state(AppState::BrushColor))
-                    .chain(),
-            )
-                .chain(),
+                    .run_if(in_state(AppState::BrushColor)),
+            ),
         )
         .add_plugins(Material2dPlugin::<HsvMaterial>::default());
     embedded_asset!(app, "shaders/hsv.wgsl")

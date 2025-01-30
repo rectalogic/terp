@@ -26,7 +26,7 @@ struct Animation {
 }
 
 impl Animation {
-    pub fn new(easing: EaseFunction) -> Self {
+    fn new(easing: EaseFunction) -> Self {
         Self {
             animating: false,
             curve: EasingCurve::new(0.0, 1.0, easing)

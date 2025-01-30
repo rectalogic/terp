@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
 mod animation;
-pub mod app;
+mod app;
 mod camera;
 pub mod cli;
 mod draw;
 mod points;
-pub mod project;
+mod project;
 mod ui;
 mod util;
 #[cfg(target_arch = "wasm32")]

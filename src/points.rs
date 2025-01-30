@@ -21,8 +21,8 @@ pub(crate) const ATTRIBUTE_TARGET_POSITION: MeshVertexAttribute =
 
 #[derive(Debug, Copy, Clone, Default, ShaderType, Serialize, Deserialize)]
 pub(crate) struct PointsSettings {
-    pub color: LinearRgba,
-    pub radius: f32,
+    pub(crate) color: LinearRgba,
+    pub(crate) radius: f32,
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Copy, Clone)]

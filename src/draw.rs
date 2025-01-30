@@ -78,6 +78,9 @@ impl Undo {
 struct ActiveDrawing;
 
 #[derive(Component)]
+struct MergedDrawing;
+
+#[derive(Component)]
 struct DrawingNumber {
     count: usize,
 }
@@ -183,10 +186,10 @@ fn end_drawing(
     mut commands: Commands,
     mut next_state: ResMut<NextState<AppState>>,
     active_drawing: Single<DrawingQuery, With<ActiveDrawing>>,
-    unmerged_drawings: Query<DrawingQuery, Without<ActiveDrawing>>,
+    unmerged_drawings: Query<DrawingQuery, (Without<ActiveDrawing>, Without<MergedDrawing>)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut points_materials: ResMut<Assets<PointsMaterial>>,
-    mesh_query: Query<(&Mesh2d, &MeshMaterial2d<PointsMaterial>), With<DrawingNumber>>,
+    mesh_query: Query<(&Mesh2d, &MeshMaterial2d<PointsMaterial>), Without<MergedDrawing>>,
 ) {
     next_state.set(AppState::Idle);
 
@@ -236,21 +239,17 @@ fn end_drawing(
             target_material = source_material;
             target_material.t = 1.0;
 
-            commands
-                .entity(target_entity)
-                .insert((
-                    Mesh2d(mesh_handle.clone()),
-                    MeshMaterial2d(points_materials.add(target_material)),
-                ))
-                .remove::<DrawingNumber>();
-            commands
-                .entity(source_entity)
-                .insert((
-                    Animatable,
-                    Mesh2d(mesh_handle),
-                    MeshMaterial2d(points_materials.add(source_material)),
-                ))
-                .remove::<DrawingNumber>();
+            commands.entity(target_entity).insert((
+                MergedDrawing,
+                Mesh2d(mesh_handle.clone()),
+                MeshMaterial2d(points_materials.add(target_material)),
+            ));
+            commands.entity(source_entity).insert((
+                Animatable,
+                MergedDrawing,
+                Mesh2d(mesh_handle),
+                MeshMaterial2d(points_materials.add(source_material)),
+            ));
         }
     }
 }
@@ -282,8 +281,40 @@ fn draw(
     }
 }
 
-fn undo_drawing(mut commands: Commands, mut undo: ResMut<Undo>) {
+fn undo_drawing(
+    mut commands: Commands,
+    mut undo: ResMut<Undo>,
+    mut drawing_count: ResMut<DrawingCount>,
+    drawings: Query<DrawingQuery>,
+    merged_drawings: Query<DrawingQuery, With<MergedDrawing>>,
+) {
     if let Some(entity) = undo.undo() {
+        if let Ok(drawing) = drawings.get(entity) {
+            let partner_interpolation = match drawing.interpolation {
+                Interpolated::Source => {
+                    drawing_count.source = drawing.number.count - 1;
+                    Interpolated::Target
+                }
+                Interpolated::Target => {
+                    drawing_count.target = drawing.number.count - 1;
+                    Interpolated::Source
+                }
+            };
+            // If the drawing being deleted is already merged, need to unmerge the partner
+            if merged_drawings.get(entity).is_ok() {
+                for partner_drawing in merged_drawings.iter() {
+                    if *partner_drawing.interpolation == partner_interpolation
+                        && partner_drawing.number.count == drawing.number.count
+                    {
+                        commands
+                            .entity(partner_drawing.entity)
+                            .remove::<(Animatable, MergedDrawing)>();
+                        break;
+                    }
+                }
+            }
+        }
+
         commands.entity(entity).despawn();
     }
 }

@@ -13,6 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: |
+          rustup update stable
+          VERSION=$(cargo metadata --format-version 1 --no-deps | jq --raw-output '.packages | map(select(.name == "terp")) | .[0].version')
+          # Fail if tag does not match cargo package version
+          [ v"$VERSION" == "${{ github.ref_name }}" ] || exit 1
       - uses: taiki-e/create-gh-release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

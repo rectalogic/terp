@@ -74,7 +74,7 @@ impl Undo {
 struct ActiveDrawing;
 
 #[derive(Component)]
-struct MergedDrawing;
+struct MergedDrawing(Entity);
 
 #[derive(Component)]
 struct DrawingNumber {
@@ -236,13 +236,13 @@ fn end_drawing(
             target_material.t = 1.0;
 
             commands.entity(target_entity).insert((
-                MergedDrawing,
+                MergedDrawing(source_entity),
                 Mesh2d(mesh_handle.clone()),
                 MeshMaterial2d(points_materials.add(target_material)),
             ));
             commands.entity(source_entity).insert((
                 Animatable,
-                MergedDrawing,
+                MergedDrawing(target_entity),
                 Mesh2d(mesh_handle),
                 MeshMaterial2d(points_materials.add(source_material)),
             ));
@@ -281,36 +281,20 @@ fn undo_drawing(
     mut commands: Commands,
     mut undo: ResMut<Undo>,
     mut drawing_count: ResMut<DrawingCount>,
-    drawings: Query<DrawingQuery>,
-    merged_drawings: Query<DrawingQuery, With<MergedDrawing>>,
+    drawings: Query<(DrawingQuery, Option<&MergedDrawing>)>,
 ) {
     if let Some(entity) = undo.undo() {
-        if let Ok(drawing) = drawings.get(entity) {
-            let partner_interpolation = match drawing.interpolation {
-                Interpolated::Source => {
-                    drawing_count.source = drawing.number.count - 1;
-                    Interpolated::Target
-                }
-                Interpolated::Target => {
-                    drawing_count.target = drawing.number.count - 1;
-                    Interpolated::Source
-                }
+        if let Ok((drawing, merged_drawing)) = drawings.get(entity) {
+            if let Some(merged_drawing) = merged_drawing {
+                commands
+                    .entity(merged_drawing.0)
+                    .remove::<(Animatable, MergedDrawing)>();
             };
-            // If the drawing being deleted is already merged, need to unmerge the partner
-            if merged_drawings.get(entity).is_ok() {
-                for partner_drawing in merged_drawings.iter() {
-                    if *partner_drawing.interpolation == partner_interpolation
-                        && partner_drawing.number.count == drawing.number.count
-                    {
-                        commands
-                            .entity(partner_drawing.entity)
-                            .remove::<(Animatable, MergedDrawing)>();
-                        break;
-                    }
-                }
-            }
+            match drawing.interpolation {
+                Interpolated::Source => drawing_count.source = drawing.number.count - 1,
+                Interpolated::Target => drawing_count.target = drawing.number.count - 1,
+            };
+            commands.entity(entity).despawn();
         }
-
-        commands.entity(entity).despawn();
     }
 }

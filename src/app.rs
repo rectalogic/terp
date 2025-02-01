@@ -68,6 +68,7 @@ impl Plugin for AppPlugin {
                     }),
                     camera::player_plugin,
                     points::plugin,
+                    draw::player_plugin,
                     animation::player_plugin,
                     project::player_plugin,
                 ))

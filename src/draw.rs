@@ -8,7 +8,9 @@ use bevy::{
 
 use crate::{
     animation::Animatable,
-    points::{Points, PointsMaterial, PointsSettings},
+    camera::{SOURCE_LAYER, TARGET_LAYER},
+    points::{Points, PointsMaterial, PointsMeshBuilder, PointsSettings},
+    project::LoadProject,
     util::window_position_to_world,
     AppState, Interpolated,
 };
@@ -20,6 +22,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(
             Update,
             (
+                load_project,
                 undo_drawing
                     .run_if(input_just_pressed(KeyCode::Backspace))
                     .run_if(in_state(AppState::Idle)),
@@ -33,6 +36,9 @@ pub(super) fn plugin(app: &mut App) {
                     .run_if(in_state(AppState::Draw)),
             ),
         );
+}
+pub(super) fn player_plugin(app: &mut App) {
+    app.add_systems(Update, load_project);
 }
 
 #[derive(Resource, Copy, Clone)]
@@ -68,6 +74,29 @@ impl Undo {
     fn undo(&mut self) -> Option<Entity> {
         self.entities.pop()
     }
+    pub fn iter_mut(&mut self) -> UndoIter {
+        UndoIter { undo: self }
+    }
+}
+
+impl Iterator for Undo {
+    type Item = Entity;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.undo()
+    }
+}
+
+struct UndoIter<'a> {
+    undo: &'a mut Undo,
+}
+
+impl<'a> Iterator for UndoIter<'a> {
+    type Item = Entity;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.undo.undo()
+    }
 }
 
 #[derive(Component)]
@@ -77,9 +106,7 @@ struct ActiveDrawing;
 struct MergedDrawing(Entity);
 
 #[derive(Component)]
-struct DrawingNumber {
-    count: usize,
-}
+struct DrawingNumber(usize);
 
 fn run_if_start_drawing(
     buttons: Res<ButtonInput<MouseButton>>,
@@ -142,10 +169,10 @@ fn start_drawing(
                 let entity = commands
                     .spawn((
                         ActiveDrawing,
-                        DrawingNumber { count },
+                        DrawingNumber(count),
                         camera_render_layers.clone(),
                         camera_interpolation_type.clone(),
-                        Mesh2d(meshes.add(Mesh::from(Points(vec![Vec3::from((
+                        Mesh2d(meshes.add(Mesh::build(&Points(vec![Vec3::from((
                             world_position,
                             count as f32, // use count as Z index
                         ))])))),
@@ -195,7 +222,7 @@ fn end_drawing(
         .remove::<ActiveDrawing>();
     // Try to find a drawing of the opposite interpolation with the same number
     for unmerged_drawing in &unmerged_drawings {
-        if unmerged_drawing.number.count == active_drawing.number.count
+        if unmerged_drawing.number.0 == active_drawing.number.0
             && unmerged_drawing.interpolation != active_drawing.interpolation
         {
             let (source_entity, target_entity) = match *active_drawing.interpolation {
@@ -267,10 +294,7 @@ fn draw(
                 if let Some(world_position) =
                     window_position_to_world(camera, camera_transform, moved.position)
                 {
-                    Points::append(
-                        mesh,
-                        Vec3::from((world_position, drawing_number.count as f32)),
-                    );
+                    Points::append(mesh, Vec3::from((world_position, drawing_number.0 as f32)));
                 };
             }
         }
@@ -291,10 +315,79 @@ fn undo_drawing(
                     .remove::<(Animatable, MergedDrawing)>();
             };
             match drawing.interpolation {
-                Interpolated::Source => drawing_count.source = drawing.number.count - 1,
-                Interpolated::Target => drawing_count.target = drawing.number.count - 1,
+                Interpolated::Source => drawing_count.source = drawing.number.0 - 1,
+                Interpolated::Target => drawing_count.target = drawing.number.0 - 1,
             };
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn load_project(
+    mut events: EventReader<LoadProject>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut points_materials: ResMut<Assets<PointsMaterial>>,
+    undo: ResMut<Undo>,
+    mut drawing_count: ResMut<DrawingCount>,
+) {
+    if let Some(LoadProject(project)) = events.read().last() {
+        let undo = undo.into_inner();
+        // Clear current project
+        for entity in undo.iter_mut() {
+            commands.entity(entity).despawn();
+        }
+
+        drawing_count.source = 0;
+        drawing_count.target = 0;
+
+        for drawing in project.drawings.iter() {
+            drawing_count.source += 1;
+            drawing_count.target += 1;
+
+            let mesh_handle = meshes.add(Mesh::build_interpolated(
+                &drawing.source_points,
+                &drawing.target_points,
+            ));
+
+            let target_entity = commands
+                .spawn((
+                    Interpolated::Target,
+                    DrawingNumber(drawing_count.target),
+                    TARGET_LAYER,
+                    Mesh2d(mesh_handle.clone()),
+                    MeshMaterial2d(points_materials.add(PointsMaterial {
+                        source_settings: drawing.source_settings,
+                        target_settings: drawing.target_settings,
+                        t: 1.0,
+                    })),
+                ))
+                .id();
+
+            let source_entity = commands
+                .spawn((
+                    Animatable,
+                    Interpolated::Source,
+                    DrawingNumber(drawing_count.source),
+                    SOURCE_LAYER,
+                    Mesh2d(mesh_handle),
+                    MeshMaterial2d(points_materials.add(PointsMaterial {
+                        source_settings: drawing.source_settings,
+                        target_settings: drawing.target_settings,
+                        t: 0.0,
+                    })),
+                ))
+                .id();
+
+            commands
+                .entity(target_entity)
+                .insert(MergedDrawing(source_entity));
+            commands
+                .entity(source_entity)
+                .insert(MergedDrawing(target_entity));
+
+            undo.add(source_entity);
+            undo.add(target_entity);
         }
     }
 }

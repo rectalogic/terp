@@ -65,9 +65,8 @@ impl Material2d for PointsMaterial {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct Points(pub Vec<Vec3>);
-pub(crate) struct PointsPair(pub Points, pub Points);
 
 impl Points {
     pub(crate) fn append(mesh: &mut Mesh, point: Vec3) {
@@ -145,8 +144,8 @@ impl Points {
     }
 }
 
-impl From<Points> for VertexAttributeValues {
-    fn from(points: Points) -> Self {
+impl From<&Points> for VertexAttributeValues {
+    fn from(points: &Points) -> Self {
         VertexAttributeValues::Float32x3(
             points
                 .0
@@ -178,38 +177,43 @@ impl TryFrom<&VertexAttributeValues> for Points {
     }
 }
 
-impl From<Points> for Mesh {
-    fn from(points: Points) -> Self {
+pub(super) trait PointsMeshBuilder {
+    fn build(points: &Points) -> Mesh;
+    fn build_interpolated<T>(source: T, target: T) -> Mesh
+    where
+        T: Into<VertexAttributeValues>;
+    fn to_points(&self) -> Result<(Points, Points), &'static str>;
+}
+
+impl PointsMeshBuilder for Mesh {
+    fn build(points: &Points) -> Mesh {
         Mesh::new(
             bevy::render::mesh::PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
         )
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, points)
     }
-}
 
-impl From<PointsPair> for Mesh {
-    fn from(pair: PointsPair) -> Self {
+    fn build_interpolated<T>(source: T, target: T) -> Mesh
+    where
+        T: Into<VertexAttributeValues>,
+    {
         Mesh::new(
             bevy::render::mesh::PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
         )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, pair.0)
-        .with_inserted_attribute(ATTRIBUTE_TARGET_POSITION, pair.1)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, source)
+        .with_inserted_attribute(ATTRIBUTE_TARGET_POSITION, target)
     }
-}
 
-impl TryFrom<&Mesh> for PointsPair {
-    type Error = &'static str;
-
-    fn try_from(mesh: &Mesh) -> Result<Self, Self::Error> {
-        Ok(PointsPair(
+    fn to_points(&self) -> Result<(Points, Points), &'static str> {
+        Ok((
             Points::try_from(
-                mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+                self.attribute(Mesh::ATTRIBUTE_POSITION)
                     .ok_or("No position attribute")?,
             )?,
             Points::try_from(
-                mesh.attribute(ATTRIBUTE_TARGET_POSITION)
+                self.attribute(ATTRIBUTE_TARGET_POSITION)
                     .ok_or("No target position attribute")?,
             )?,
         ))

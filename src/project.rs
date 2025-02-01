@@ -9,14 +9,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     animation::Animatable,
-    camera::{SOURCE_LAYER, TARGET_LAYER},
     cli,
-    points::{Points, PointsMaterial, PointsPair, PointsSettings},
-    Interpolated,
+    points::{Points, PointsMaterial, PointsMeshBuilder, PointsSettings},
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_event::<LoadProject>()
+    app.add_event::<LoadProjectData>()
+        .add_event::<LoadProject>()
         .add_systems(Startup, read_project.pipe(error_handler))
         .add_systems(
             Update,
@@ -30,32 +29,30 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 pub(super) fn player_plugin(app: &mut App) {
-    app.add_event::<LoadProject>()
+    app.add_event::<LoadProjectData>()
+        .add_event::<LoadProject>()
         .add_systems(Startup, read_project.pipe(error_handler))
         .add_systems(Update, load_project.pipe(error_handler));
 }
 
 #[derive(Serialize, Deserialize)]
-struct Project {
-    drawings: Vec<Drawing>,
+pub(crate) struct Project {
+    pub(crate) drawings: Vec<Drawing>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct Drawing {
-    source_settings: PointsSettings,
-    target_settings: PointsSettings,
-    source_points: Vec<Vec3>,
-    target_points: Vec<Vec3>,
+pub(crate) struct Drawing {
+    pub(crate) source_settings: PointsSettings,
+    pub(crate) target_settings: PointsSettings,
+    pub(crate) source_points: Points,
+    pub(crate) target_points: Points,
 }
 
 #[derive(Event)]
-pub struct LoadProject(Vec<u8>);
+struct LoadProjectData(Vec<u8>);
 
-impl LoadProject {
-    pub fn new(data: Vec<u8>) -> Self {
-        Self(data)
-    }
-}
+#[derive(Event)]
+pub(crate) struct LoadProject(pub(crate) Project);
 
 fn read_project(args: Res<cli::Args>, mut commands: Commands) -> Result<()> {
     let Some(path) = args.project() else {
@@ -64,46 +61,15 @@ fn read_project(args: Res<cli::Args>, mut commands: Commands) -> Result<()> {
     if !path.exists() {
         return Ok(());
     }
-    commands.send_event(LoadProject::new(fs::read(path)?));
+    commands.send_event(LoadProjectData(fs::read(path)?));
     Ok(())
 }
 
-fn load_project(
-    mut events: EventReader<LoadProject>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut points_materials: ResMut<Assets<PointsMaterial>>,
-) -> Result<()> {
-    for event in events.read() {
+fn load_project(mut events: EventReader<LoadProjectData>, mut commands: Commands) -> Result<()> {
+    if let Some(event) = events.read().last() {
         let reader = flexbuffers::Reader::get_root(event.0.as_slice())?;
         let project = Project::deserialize(reader)?;
-        for drawing in project.drawings {
-            let mesh_handle = meshes.add(Mesh::from(PointsPair(
-                Points(drawing.source_points),
-                Points(drawing.target_points),
-            )));
-            commands.spawn((
-                Interpolated::Target,
-                TARGET_LAYER,
-                Mesh2d(mesh_handle.clone()),
-                MeshMaterial2d(points_materials.add(PointsMaterial {
-                    source_settings: drawing.source_settings,
-                    target_settings: drawing.target_settings,
-                    t: 1.0,
-                })),
-            ));
-            commands.spawn((
-                Animatable,
-                Interpolated::Source,
-                SOURCE_LAYER,
-                Mesh2d(mesh_handle),
-                MeshMaterial2d(points_materials.add(PointsMaterial {
-                    source_settings: drawing.source_settings,
-                    target_settings: drawing.target_settings,
-                    t: 0.0,
-                })),
-            ));
-        }
+        commands.send_event(LoadProject(project));
     }
     Ok(())
 }
@@ -123,12 +89,12 @@ fn save_project(
         .filter_map(|(material2d, mesh2d)| -> Option<Drawing> {
             let material = materials.get(material2d)?;
             let mesh = meshes.get(mesh2d)?;
-            let PointsPair(source_points, target_points) = PointsPair::try_from(mesh).ok()?;
+            let (source_points, target_points) = mesh.to_points().ok()?;
             Some(Drawing {
                 source_settings: material.source_settings,
                 target_settings: material.target_settings,
-                source_points: source_points.0,
-                target_points: target_points.0,
+                source_points,
+                target_points,
             })
         })
         .collect();

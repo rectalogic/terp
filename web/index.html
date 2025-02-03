@@ -4,18 +4,26 @@
     </head>
     <body>
         <script type="module">
-            import init, { play } from "./pkg/terp.js";
+            import Terp from "./terp.js";
+
+            const terp = new Terp();
+
+            function load(path) {
+                return fetch(path).then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Response status: ${response.status}`);
+                    }
+                    return response.bytes();
+                });
+            }
 
             async function run() {
-                const response = await fetch("t.terp");
-                if (!response.ok) {
-                    throw new Error(`Response status: ${response.status}`);
-                }
-                await init();
-                const data = await response.bytes();
-                play(data);
+                const project = load("t.terp");
+                await terp.init();
+                terp.load(await project);
             }
-            run();
+
+            await run();
         </script>
     </body>
 </html>

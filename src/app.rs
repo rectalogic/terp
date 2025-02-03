@@ -1,6 +1,17 @@
-use bevy::{app::App, prelude::*, DefaultPlugins};
+use bevy::{
+    app::App,
+    prelude::*,
+    winit::{WakeUp, WinitPlugin},
+    DefaultPlugins,
+};
 
-use crate::{animation, camera, cli, draw, points, project, ui, AppState};
+#[cfg(target_arch = "wasm32")]
+use crate::webgpu;
+use crate::{
+    animation, camera, cli, draw, points,
+    project::{self, LoadProjectData},
+    ui, AppState,
+};
 
 pub enum AppPlugin {
     Editor(cli::Args),
@@ -12,11 +23,10 @@ impl AppPlugin {
         App::new().add_plugins(self).run()
     }
     #[cfg(target_arch = "wasm32")]
-    pub(crate) fn run_with_event(self, event: impl Event) -> AppExit {
+    pub(crate) fn app(self) -> App {
         let mut app = App::new();
         app.add_plugins(self);
-        app.world_mut().send_event(event);
-        app.run()
+        app
     }
 }
 
@@ -30,47 +40,49 @@ fn title_suffix(title: &str, args: &cli::Args) -> String {
 
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
-        let title = match self {
-            AppPlugin::Editor(args) => title_suffix("Terp", &args),
-            AppPlugin::Player(args) => title_suffix("Terp Player", &args),
+        let (title, rez) = match self {
+            AppPlugin::Editor(args) => (title_suffix("Terp", &args), (1200., 600.)),
+            AppPlugin::Player(args) => (title_suffix("Terp Player", &args), (600., 600.)),
         };
+        let default_plugins = DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title,
+                    resolution: rez.into(),
+                    ..default()
+                }),
+                ..default()
+            })
+            .build()
+            .disable::<WinitPlugin<WakeUp>>()
+            .add(WinitPlugin::<LoadProjectData>::default());
 
         match self {
             AppPlugin::Editor(args) => {
                 app.add_plugins((
-                    DefaultPlugins.set(WindowPlugin {
-                        primary_window: Some(Window {
-                            title,
-                            resolution: (1200., 600.).into(),
-                            ..default()
-                        }),
-                        ..default()
-                    }),
+                    default_plugins,
                     camera::plugin,
                     points::plugin,
                     draw::plugin,
                     animation::plugin,
                     ui::plugin,
                     project::plugin,
+                    #[cfg(target_arch = "wasm32")]
+                    webgpu::plugin,
                 ))
                 .insert_state(AppState::Idle)
                 .insert_resource(args.clone());
             }
             AppPlugin::Player(args) => {
                 app.add_plugins((
-                    DefaultPlugins.set(WindowPlugin {
-                        primary_window: Some(Window {
-                            title,
-                            resolution: (600., 600.).into(),
-                            ..default()
-                        }),
-                        ..default()
-                    }),
+                    default_plugins,
                     camera::player_plugin,
                     points::plugin,
                     draw::player_plugin,
                     animation::player_plugin,
                     project::player_plugin,
+                    #[cfg(target_arch = "wasm32")]
+                    webgpu::plugin,
                 ))
                 .insert_state(AppState::Idle)
                 .insert_resource(args.clone());

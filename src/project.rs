@@ -48,8 +48,8 @@ pub(crate) struct Drawing {
     pub(crate) target_points: Points,
 }
 
-#[derive(Event)]
-struct LoadProjectData(Vec<u8>);
+#[derive(Event, Default, Debug)]
+pub(crate) struct LoadProjectData(pub(crate) Vec<u8>);
 
 #[derive(Event)]
 pub(crate) struct LoadProject(pub(crate) Project);

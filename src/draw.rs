@@ -37,8 +37,11 @@ pub(super) fn plugin(app: &mut App) {
             ),
         );
 }
+
 pub(super) fn player_plugin(app: &mut App) {
-    app.add_systems(Update, load_project);
+    app.insert_resource(Undo::default())
+        .insert_resource(DrawingCount::default())
+        .add_systems(Update, load_project);
 }
 
 #[derive(Resource, Copy, Clone)]

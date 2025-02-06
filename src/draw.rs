@@ -175,10 +175,8 @@ fn start_drawing(
                         DrawingNumber(count),
                         camera_render_layers.clone(),
                         camera_interpolation_type.clone(),
-                        Mesh2d(meshes.add(Mesh::build(&Points(vec![Vec3::from((
-                            world_position,
-                            count as f32, // use count as Z index
-                        ))])))),
+                        Mesh2d(meshes.add(Mesh::build(&Points(vec![world_position])))),
+                        Transform::from_xyz(0., 0., count as f32), // use count as Z index
                         MeshMaterial2d(materials.add(PointsMaterial {
                             source_settings: PointsSettings {
                                 color: brush.color.into(),
@@ -282,11 +280,11 @@ fn end_drawing(
 
 fn draw(
     mut cursor: EventReader<CursorMoved>,
-    drawing: Single<(&Mesh2d, &RenderLayers, &DrawingNumber), With<ActiveDrawing>>,
+    drawing: Single<(&Mesh2d, &RenderLayers), With<ActiveDrawing>>,
     mut meshes: ResMut<Assets<Mesh>>,
     camera_query: Query<(&Camera, &RenderLayers, &GlobalTransform)>,
 ) {
-    let (mesh2d, drawing_render_layers, drawing_number) = *drawing;
+    let (mesh2d, drawing_render_layers) = *drawing;
     if let Some(mesh) = meshes.get_mut(mesh2d) {
         for (camera, camera_render_layers, camera_transform) in &camera_query {
             if !camera_render_layers.intersects(drawing_render_layers) {
@@ -297,7 +295,7 @@ fn draw(
                 if let Some(world_position) =
                     window_position_to_world(camera, camera_transform, moved.position)
                 {
-                    Points::append(mesh, Vec3::from((world_position, drawing_number.0 as f32)));
+                    Points::append(mesh, world_position);
                 };
             }
         }
@@ -358,6 +356,7 @@ fn load_project(
                     Interpolated::Target,
                     DrawingNumber(drawing_count.target),
                     TARGET_LAYER,
+                    Transform::from_xyz(0., 0., drawing.layer),
                     Mesh2d(mesh_handle.clone()),
                     MeshMaterial2d(points_materials.add(PointsMaterial {
                         source_settings: drawing.source_settings,
@@ -373,6 +372,7 @@ fn load_project(
                     Interpolated::Source,
                     DrawingNumber(drawing_count.source),
                     SOURCE_LAYER,
+                    Transform::from_xyz(0., 0., drawing.layer),
                     Mesh2d(mesh_handle),
                     MeshMaterial2d(points_materials.add(PointsMaterial {
                         source_settings: drawing.source_settings,

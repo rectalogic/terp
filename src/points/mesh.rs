@@ -6,15 +6,15 @@ use serde::{Deserialize, Serialize};
 use super::ATTRIBUTE_TARGET_POSITION;
 
 #[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct Points(pub Vec<Vec3>);
+pub(crate) struct Points(pub Vec<Vec2>);
 
 impl Points {
-    pub(crate) fn append(mesh: &mut Mesh, point: Vec3) {
+    pub(crate) fn append(mesh: &mut Mesh, point: Vec2) {
         if let Some(VertexAttributeValues::Float32x3(ref mut positions)) =
             mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
         {
             positions.reserve(3);
-            let p = point.to_array();
+            let p = Vec3::from((point, 0.)).to_array();
             positions.push(p);
             positions.push(p);
             positions.push(p);
@@ -92,7 +92,7 @@ impl From<&Points> for VertexAttributeValues {
                 .iter()
                 // Triple each vertex so we can construct triangles
                 .flat_map(|p| {
-                    let p = p.to_array();
+                    let p = Vec3::from((*p, 0.)).to_array();
                     [p, p, p]
                 })
                 .collect(),
@@ -109,7 +109,7 @@ impl TryFrom<&VertexAttributeValues> for Points {
                 points
                     .into_iter()
                     .step_by(3)
-                    .map(|p| Vec3::from(*p))
+                    .map(|p| Vec2::from_slice(&p[0..2]))
                     .collect(),
             )),
             _ => Err("Unsupported vertex type"),

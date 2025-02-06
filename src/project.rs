@@ -46,6 +46,7 @@ pub(crate) struct Drawing {
     pub(crate) target_settings: PointsSettings,
     pub(crate) source_points: Points,
     pub(crate) target_points: Points,
+    pub(crate) layer: f32,
 }
 
 #[derive(Event, Default, Debug)]
@@ -76,7 +77,7 @@ fn load_project(mut events: EventReader<LoadProjectData>, mut commands: Commands
 
 fn save_project(
     args: Res<cli::Args>,
-    entities: Query<(&MeshMaterial2d<PointsMaterial>, &Mesh2d), With<Animatable>>,
+    entities: Query<(&MeshMaterial2d<PointsMaterial>, &Mesh2d, &Transform), With<Animatable>>,
     materials: Res<Assets<PointsMaterial>>,
     meshes: Res<Assets<Mesh>>,
 ) -> Result<()> {
@@ -86,7 +87,7 @@ fn save_project(
 
     let drawings: Vec<Drawing> = entities
         .iter()
-        .filter_map(|(material2d, mesh2d)| -> Option<Drawing> {
+        .filter_map(|(material2d, mesh2d, transform)| -> Option<Drawing> {
             let material = materials.get(material2d)?;
             let mesh = meshes.get(mesh2d)?;
             let (source_points, target_points) = mesh.to_points().ok()?;
@@ -95,6 +96,7 @@ fn save_project(
                 target_settings: material.target_settings,
                 source_points,
                 target_points,
+                layer: transform.translation.z,
             })
         })
         .collect();

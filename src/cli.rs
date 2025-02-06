@@ -33,7 +33,7 @@ pub fn parse_cli() -> app::AppPlugin {
         Some(("player", player_matches)) => {
             app::AppPlugin::Player(Args::new(player_matches.get_one::<String>("project")))
         }
-        None => app::AppPlugin::Editor(Args::new(None)),
+        None => app::AppPlugin::Editor(Args::new::<String>(None)),
         _ => unreachable!("All commands covered"),
     }
 }
@@ -45,7 +45,7 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn new(project: Option<&String>) -> Self {
+    pub fn new<I: Into<String>>(project: Option<I>) -> Self {
         Self {
             project: project.map(|p| p.into()),
         }

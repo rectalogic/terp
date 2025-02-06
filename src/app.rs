@@ -90,3 +90,20 @@ impl Plugin for AppPlugin {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_title_suffix() {
+        let args = cli::Args::default();
+        assert_eq!(title_suffix("Test", &args), "Test");
+
+        let args_with_project = cli::Args::new(Some("example.terp"));
+        assert_eq!(
+            title_suffix("Test", &args_with_project),
+            "Test - example.terp"
+        );
+    }
+}

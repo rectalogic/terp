@@ -38,7 +38,7 @@ pub fn parse_cli() -> app::AppPlugin {
     }
 }
 
-#[derive(Resource, Clone, Debug)]
+#[derive(Resource, Clone, Default, Debug)]
 pub struct Args {
     /// Project file
     project: Option<String>,

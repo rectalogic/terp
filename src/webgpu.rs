@@ -46,7 +46,7 @@ impl Terp {
 
 #[wasm_bindgen]
 pub fn create_terp(resolve: Function) -> Terp {
-    let mut app = AppPlugin::Player(Args::new::<String>(None)).app();
+    let mut app = AppPlugin::Player(Args::default()).app();
     app.insert_non_send_resource(TerpCallback { resolve });
     Terp { app }
 }

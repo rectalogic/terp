@@ -123,3 +123,111 @@ fn update_camera_viewports(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_player_camera_creation() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Startup, setup_player_camera);
+        app.update();
+
+        let mut query = app
+            .world_mut()
+            .query::<(&Camera2d, &RenderLayers, &Interpolated)>();
+        let results: Vec<_> = query.iter(&app.world()).collect();
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(*results[0].1, SOURCE_LAYER);
+        assert_eq!(*results[0].2, Interpolated::Source);
+    }
+
+    #[test]
+    fn test_camera_setup() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_systems(Startup, setup_cameras);
+        app.update();
+
+        let mut camera_query = app
+            .world_mut()
+            .query::<(&Camera2d, &RenderLayers, &Interpolated)>();
+        let cameras: Vec<_> = camera_query.iter(&app.world()).collect();
+
+        assert_eq!(cameras.len(), 2);
+        assert_ne!(cameras[0].1, cameras[1].1);
+        assert_ne!(cameras[0].2, cameras[1].2);
+
+        let mut layout_query = app
+            .world_mut()
+            .query_filtered::<&Interpolated, With<CameraLayout>>();
+        let layouts: Vec<_> = layout_query.iter(&app.world()).collect();
+
+        assert_eq!(layouts.len(), 2);
+        assert_ne!(layouts[0], layouts[1]);
+    }
+
+    #[test]
+    fn test_update_camera_viewports() {
+        let mut app = App::new();
+        app.add_plugins((
+            MinimalPlugins,
+            bevy::transform::TransformPlugin::default(),
+            bevy::render::camera::CameraPlugin::default(),
+            bevy::asset::AssetPlugin::default(),
+            bevy::ui::UiPlugin {
+                enable_rendering: false,
+                add_picking: false,
+            },
+            bevy::input::InputPlugin::default(),
+            bevy::render::texture::ImagePlugin::default(),
+            bevy::text::TextPlugin::default(),
+            bevy::window::WindowPlugin::default(),
+        ))
+        .init_asset::<TextureAtlasLayout>()
+        .add_systems(Startup, setup_cameras)
+        .add_systems(Update, update_camera_viewports);
+
+        app.world_mut().spawn((
+            Camera2d,
+            Camera {
+                order: 2,
+                ..default()
+            },
+        ));
+
+        // Run startup systems
+        app.update();
+        // Run layout
+        app.update();
+
+        let mut query = app.world_mut().query::<(&Camera, &Interpolated)>();
+        let cameras: Vec<_> = query.iter(&app.world()).collect();
+
+        assert_eq!(cameras.len(), 2);
+        for (camera, interpolated) in cameras {
+            let viewport = camera
+                .viewport
+                .as_ref()
+                .expect("Camera should have viewport");
+
+            // Verify viewport size (should be roughly half the window width)
+            assert!(viewport.physical_size.x > 0);
+            assert!(viewport.physical_size.x < 1200); // Should be less than full window width
+            assert!(viewport.physical_size.y > 0);
+
+            // Verify position based on interpolated type
+            match interpolated {
+                Interpolated::Source => {
+                    assert_eq!(viewport.physical_position.x, 4); // Left side
+                }
+                Interpolated::Target => {
+                    assert!(viewport.physical_position.x > 4); // Right side
+                }
+            }
+        }
+    }
+}

@@ -85,3 +85,60 @@ fn animate(
         update_times(animation_query, points_materials, t);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_animation_new() {
+        let anim = Animation::new(EaseFunction::Linear);
+        assert!(!anim.animating);
+        assert_eq!(anim.time, 0.0);
+    }
+
+    #[test]
+    fn test_animation_default() {
+        let anim = Animation::default();
+        assert!(!anim.animating);
+        assert_eq!(anim.time, 0.0);
+    }
+
+    #[test]
+    fn test_toggle_animation() {
+        let mut app = App::new();
+
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Animation>()
+            .init_resource::<Assets<PointsMaterial>>();
+
+        let animation = app.world().resource::<Animation>();
+        assert!(!animation.animating);
+
+        app.add_systems(Update, toggle_animation);
+        app.update();
+
+        let animation = app.world().resource::<Animation>();
+        assert!(animation.animating);
+    }
+
+    #[test]
+    fn test_animate() {
+        let mut app = App::new();
+
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Animation>()
+            .init_resource::<Assets<PointsMaterial>>();
+
+        let mut animation = app.world_mut().resource_mut::<Animation>();
+        animation.animating = true;
+
+        app.add_systems(Update, animate);
+
+        app.update();
+        app.update();
+
+        let animation = app.world().resource::<Animation>();
+        assert!(animation.time > 0.0);
+    }
+}

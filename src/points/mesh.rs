@@ -1,9 +1,9 @@
 use std::cmp::Ordering;
 
+use super::ATTRIBUTE_TARGET_POSITION;
+use anyhow::{anyhow, Result};
 use bevy::{asset::RenderAssetUsages, prelude::*, render::mesh::VertexAttributeValues};
 use serde::{Deserialize, Serialize};
-
-use super::ATTRIBUTE_TARGET_POSITION;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct Points(pub Vec<Vec2>);
@@ -119,7 +119,7 @@ impl TryFrom<&VertexAttributeValues> for Points {
 
 pub(crate) trait PointsMeshBuilder {
     fn build(points: &Points) -> Mesh;
-    fn build_interpolated<T>(source: T, target: T) -> Mesh
+    fn build_interpolated<T>(source: T, target: T) -> Result<Mesh>
     where
         T: Into<VertexAttributeValues>;
     fn to_points(&self) -> Result<(Points, Points), &'static str>;
@@ -134,16 +134,23 @@ impl PointsMeshBuilder for Mesh {
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, points)
     }
 
-    fn build_interpolated<T>(source: T, target: T) -> Mesh
+    fn build_interpolated<T>(source: T, target: T) -> Result<Mesh>
     where
         T: Into<VertexAttributeValues>,
     {
-        Mesh::new(
+        let source: VertexAttributeValues = source.into();
+        let target: VertexAttributeValues = target.into();
+        if source.len() != target.len() {
+            return Err(anyhow!(
+                "source and target have different number of vertices"
+            ));
+        }
+        Ok(Mesh::new(
             bevy::render::mesh::PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
         )
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, source)
-        .with_inserted_attribute(ATTRIBUTE_TARGET_POSITION, target)
+        .with_inserted_attribute(ATTRIBUTE_TARGET_POSITION, target))
     }
 
     fn to_points(&self) -> Result<(Points, Points), &'static str> {
@@ -165,7 +172,63 @@ mod tests {
     use super::*;
 
     #[test]
-    fn padding() {
+    fn test_points_append() {
+        let mut mesh = Mesh::new(
+            bevy::render::mesh::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
+        mesh.insert_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            VertexAttributeValues::Float32x3(vec![]),
+        );
+        Points::append(&mut mesh, Vec2::new(1.0, 2.0));
+        let positions = mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
+        if let VertexAttributeValues::Float32x3(positions) = positions {
+            assert_eq!(
+                *positions,
+                vec![[1.0, 2.0, 0.0], [1.0, 2.0, 0.0], [1.0, 2.0, 0.0]]
+            );
+        }
+    }
+
+    #[test]
+    fn test_points_conversion() {
+        let points = Points(vec![Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0)]);
+        let vertex_attrs: VertexAttributeValues = (&points).into();
+        if let VertexAttributeValues::Float32x3(positions) = vertex_attrs.clone() {
+            assert_eq!(positions.len(), 6);
+            assert_eq!(positions[0], [1.0, 2.0, 0.0]);
+            assert_eq!(positions[3], [3.0, 4.0, 0.0]);
+        }
+
+        let points_back = Points::try_from(&vertex_attrs).unwrap();
+        assert_eq!(points_back.0.len(), 2);
+        assert_eq!(points_back.0[0], Vec2::new(1.0, 2.0));
+        assert_eq!(points_back.0[1], Vec2::new(3.0, 4.0));
+    }
+
+    #[test]
+    fn test_mesh_builder() {
+        let points = Points(vec![Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0)]);
+        let mesh = Mesh::build(&points);
+        let result = mesh.to_points();
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn test_mesh_builder_interpolated() {
+        let source_points = Points(vec![Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0)]);
+        let target_points = Points(vec![Vec2::new(5.0, 6.0), Vec2::new(7.0, 8.0)]);
+
+        let mesh = Mesh::build_interpolated(&source_points, &target_points).unwrap();
+        let (source, target) = mesh.to_points().unwrap();
+
+        assert_eq!(source.0, vec![Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0)]);
+        assert_eq!(target.0, vec![Vec2::new(5.0, 6.0), Vec2::new(7.0, 8.0)]);
+    }
+
+    #[test]
+    fn test_padding() {
         assert_eq!(
             Points::pad_positions(&[1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4], 7 * 3),
             vec![1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4,]

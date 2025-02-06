@@ -1,0 +1,15 @@
+name: CI
+
+on: push
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package updates
+        run: sudo apt-get update && sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0
+      - name: rustup
+        run: rustup update stable
+      - name: Run tests
+        run: cargo test

@@ -1,18 +1,19 @@
+use crate::{
+    animation::Animatable,
+    camera::{SOURCE_LAYER, TARGET_LAYER},
+    error_handler,
+    points::{Points, PointsMaterial, PointsMeshBuilder, PointsSettings},
+    project::LoadProject,
+    util::window_position_to_world,
+    AppState, Interpolated,
+};
+use anyhow::Result;
 use bevy::{
     ecs::query::{QueryData, QueryEntityError},
     input::common_conditions::{input_just_pressed, input_just_released},
     prelude::*,
     render::view::RenderLayers,
     window::PrimaryWindow,
-};
-
-use crate::{
-    animation::Animatable,
-    camera::{SOURCE_LAYER, TARGET_LAYER},
-    points::{Points, PointsMaterial, PointsMeshBuilder, PointsSettings},
-    project::LoadProject,
-    util::window_position_to_world,
-    AppState, Interpolated,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -22,7 +23,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(
             Update,
             (
-                load_project,
+                load_project.pipe(error_handler),
                 undo_drawing
                     .run_if(input_just_pressed(KeyCode::Backspace))
                     .run_if(in_state(AppState::Idle)),
@@ -41,7 +42,7 @@ pub(super) fn plugin(app: &mut App) {
 pub(super) fn player_plugin(app: &mut App) {
     app.insert_resource(Undo::default())
         .insert_resource(DrawingCount::default())
-        .add_systems(Update, load_project);
+        .add_systems(Update, load_project.pipe(error_handler));
 }
 
 #[derive(Resource, Copy, Clone)]
@@ -331,7 +332,7 @@ fn load_project(
     mut points_materials: ResMut<Assets<PointsMaterial>>,
     undo: ResMut<Undo>,
     mut drawing_count: ResMut<DrawingCount>,
-) {
+) -> Result<()> {
     if let Some(LoadProject(project)) = events.read().last() {
         let undo = undo.into_inner();
         // Clear current project
@@ -349,7 +350,7 @@ fn load_project(
             let mesh_handle = meshes.add(Mesh::build_interpolated(
                 &drawing.source_points,
                 &drawing.target_points,
-            ));
+            )?);
 
             let target_entity = commands
                 .spawn((
@@ -393,4 +394,5 @@ fn load_project(
             undo.add(target_entity);
         }
     }
+    Ok(())
 }

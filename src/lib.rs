@@ -1,5 +1,5 @@
+use anyhow::Result;
 use bevy::prelude::*;
-
 mod animation;
 mod app;
 mod camera;
@@ -20,9 +20,15 @@ enum AppState {
     BrushColor,
 }
 
-#[derive(Component, Clone, PartialEq)]
+#[derive(Component, Clone, PartialEq, Debug)]
 #[require(Mesh2d, MeshMaterial2d<points::PointsMaterial>)]
 enum Interpolated {
     Source,
     Target,
+}
+
+fn error_handler(In(result): In<Result<()>>) {
+    if let Err(err) = result {
+        println!("Failed to save/load project {:?}", err);
+    }
 }

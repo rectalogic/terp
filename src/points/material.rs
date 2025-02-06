@@ -13,7 +13,7 @@ pub(crate) struct PointsSettings {
     pub(crate) radius: f32,
 }
 
-#[derive(Asset, TypePath, AsBindGroup, Debug, Copy, Clone)]
+#[derive(Asset, TypePath, AsBindGroup, Debug, Default, Copy, Clone)]
 pub(crate) struct PointsMaterial {
     #[uniform(0)]
     pub(crate) source_settings: PointsSettings,
@@ -50,5 +50,48 @@ impl Material2d for PointsMaterial {
             descriptor.vertex.shader_defs.push("INTERPOLATED".into());
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_material_properties() {
+        let material = PointsMaterial {
+            source_settings: PointsSettings {
+                color: LinearRgba::default(),
+                radius: 1.0,
+            },
+            target_settings: PointsSettings {
+                color: LinearRgba::default(),
+                radius: 2.0,
+            },
+            t: 0.5,
+        };
+
+        assert_eq!(material.t, 0.5);
+        assert_eq!(material.source_settings.radius, 1.0);
+        assert_eq!(material.target_settings.radius, 2.0);
+    }
+
+    #[test]
+    fn test_points_settings_default() {
+        let settings = PointsSettings::default();
+        assert_eq!(settings.color, LinearRgba::default());
+        assert_eq!(settings.radius, 0.0);
+    }
+
+    #[test]
+    fn test_points_settings_clone() {
+        let settings = PointsSettings {
+            color: LinearRgba::default(),
+            radius: 1.0,
+        };
+        let cloned = settings.clone();
+
+        assert_eq!(settings.color, cloned.color);
+        assert_eq!(settings.radius, cloned.radius);
     }
 }

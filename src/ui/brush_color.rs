@@ -90,6 +90,7 @@ fn start_select_color(
         *brush_transform = Transform::from_translation(Vec3::from((brush_point, 0.)));
         if let Some(material) = materials.get_mut(brush_material) {
             material.color = brush.color.into();
+            material.value = brush.color.value;
         }
         commands.entity(brush_entity).insert(Visibility::Visible);
         next_state.set(AppState::BrushColor);
@@ -115,11 +116,16 @@ fn select_color(
             let origin = brush_global_transform.transform_point(Vec3::ZERO).xy();
             let right = brush_global_transform.transform_point(Vec3::X).xy();
             let distance = (world_position.distance(origin) / RADIUS).clamp(0.0, 1.0);
-            let angle = ((origin - world_position).angle_to(origin - right) + PI).to_degrees();
+            let angle = if distance != 0. {
+                ((origin - world_position).angle_to(origin - right) + PI).to_degrees()
+            } else {
+                0.
+            };
 
             if let Some(material) = materials.get_mut(brush_material) {
                 brush.color = Hsva::hsv(angle, distance, brush.color.value);
                 material.color = brush.color.into();
+                material.value = brush.color.value;
             }
         };
     }

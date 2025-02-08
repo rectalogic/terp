@@ -1,29 +1,15 @@
-<html>
+<!doctype html>
+<html lang="en">
     <head>
-        <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Terp</title>
     </head>
     <body>
-        <script type="module">
-            import Terp from "./terp.js";
-
-            const terp = new Terp();
-
-            function load(path) {
-                return fetch(path).then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`Response status: ${response.status}`);
-                    }
-                    return response.bytes();
-                });
-            }
-
-            async function run() {
-                const project = load("t.terp");
-                await terp.init();
-                terp.load(await project);
-            }
-
-            await run();
-        </script>
+        <h1>Terp</h1>
+        <ul>
+            <li>Terp <a href="player.html">Player</a></li>
+            <li>Terp <a href="editor.html">Editor</a></li>
+        </ul>
     </body>
 </html>

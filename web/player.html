@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Terp Player</title>
+
+        <script type="module">
+            import Terp from "./terp.js";
+
+            const terp = new Terp();
+
+            function load(path) {
+                return fetch(path).then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Response status: ${response.status}`);
+                    }
+                    return response.bytes();
+                });
+            }
+
+            async function run() {
+                const select = document.getElementById("project-select");
+
+                const loadProject = async (p) => terp.load(await load(p));
+
+                await terp.init();
+                loadProject(select.value);
+
+                select.addEventListener("change", (e) =>
+                    loadProject(e.target.value),
+                );
+            }
+
+            run();
+        </script>
+    </head>
+    <body>
+        <div>
+            <label for="project-select">Choose a project:</label>
+            <select name="projects" id="project-select">
+                <option value="demo/smile.terp">Smile</option>
+                <option value="demo/x.terp">X</option>
+                <option value="demo/sunrise.terp">Sunrise</option>
+            </select>
+        </div>
+    </body>
+</html>

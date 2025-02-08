@@ -5,7 +5,7 @@ use bevy::winit::{EventLoopProxy, EventLoopProxyWrapper};
 use js_sys::Function;
 use wasm_bindgen::prelude::*;
 
-// wasm-pack build --debug --target web --out-dir web/pkg
+// wasm-pack build --release --target web --out-dir web/pkg
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, startup);
@@ -44,11 +44,20 @@ impl Terp {
     }
 }
 
-#[wasm_bindgen]
-pub fn create_terp(resolve: Function) -> Terp {
-    let mut app = AppPlugin::Player(Args::default()).app();
+fn create(plugin: AppPlugin, resolve: Function) -> Terp {
+    let mut app = plugin.app();
     app.insert_non_send_resource(TerpCallback { resolve });
     Terp { app }
+}
+
+#[wasm_bindgen]
+pub fn create_editor(resolve: Function) -> Terp {
+    create(AppPlugin::Editor(Args::default()), resolve)
+}
+
+#[wasm_bindgen]
+pub fn create_player(resolve: Function) -> Terp {
+    create(AppPlugin::Player(Args::default()), resolve)
 }
 
 fn startup(

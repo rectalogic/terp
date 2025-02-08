@@ -1,13 +1,14 @@
-import init, { create_terp } from "./pkg/terp.js";
+import init, { create_player, create_editor } from "./pkg/terp.js";
 
 export default class Terp {
   #terp;
   #terpLoader;
 
-  async init() {
+  async init(isEditor) {
+    const create = isEditor ? create_editor : create_player;
     await init();
     return new Promise((resolve) => {
-      this.#terp = create_terp((loader) => {
+      this.#terp = create((loader) => {
         this.#terpLoader = loader;
         resolve();
       });

@@ -4,17 +4,15 @@ use bevy::{
     render::{camera::Viewport, view::RenderLayers},
 };
 
-use crate::Interpolated;
-
-#[derive(Component)]
-struct CameraLayout;
+use crate::{ui::CameraLayout, Interpolated};
 
 pub(crate) const SOURCE_LAYER: RenderLayers = RenderLayers::layer(1);
 pub(crate) const TARGET_LAYER: RenderLayers = RenderLayers::layer(2);
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, setup_cameras)
-        .add_systems(Update, update_camera_viewports);
+        // Need to update cameras after UiLayout which is in PostUpdate
+        .add_systems(Last, update_camera_viewports);
 }
 
 pub(super) fn player_plugin(app: &mut App) {
@@ -45,35 +43,6 @@ fn setup_cameras(mut commands: Commands) {
         TARGET_LAYER,
         Interpolated::Target,
     ));
-    // Layout for cameras. We track Node layout with camera Viewport.
-    commands
-        .spawn((Node {
-            display: Display::Grid,
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            grid_template_columns: vec![GridTrack::percent(50.0), GridTrack::percent(50.0)],
-            ..default()
-        },))
-        .with_children(|parent| {
-            parent.spawn((
-                Interpolated::Source,
-                CameraLayout,
-                Node {
-                    border: UiRect::all(Val::Px(4.)),
-                    ..default()
-                },
-                BorderColor(Srgba::rgb(0.4, 0.4, 0.4).into()),
-            ));
-            parent.spawn((
-                Interpolated::Target,
-                CameraLayout,
-                Node {
-                    border: UiRect::all(Val::Px(4.)),
-                    ..default()
-                },
-                BorderColor(Srgba::rgb(0.3, 0.3, 0.3).into()),
-            ));
-        });
 }
 
 #[derive(QueryData)]
@@ -128,6 +97,21 @@ fn update_camera_viewports(
 mod tests {
     use super::*;
 
+    fn setup_ui(world: &mut World) {
+        world
+            .spawn((Node {
+                display: Display::Grid,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                grid_template_columns: vec![GridTrack::percent(50.0), GridTrack::percent(50.0)],
+                ..default()
+            },))
+            .with_children(|parent| {
+                parent.spawn((Interpolated::Source, CameraLayout, Node::default()));
+                parent.spawn((Interpolated::Target, CameraLayout, Node::default()));
+            });
+    }
+
     #[test]
     fn test_player_camera_creation() {
         let mut app = App::new();
@@ -149,7 +133,7 @@ mod tests {
     fn test_camera_setup() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_systems(Startup, setup_cameras);
+            .add_systems(Startup, (setup_cameras, setup_ui));
         app.update();
 
         let mut camera_query = app
@@ -188,7 +172,7 @@ mod tests {
             bevy::window::WindowPlugin::default(),
         ))
         .init_asset::<TextureAtlasLayout>()
-        .add_systems(Startup, setup_cameras)
+        .add_systems(Startup, (setup_cameras, setup_ui))
         .add_systems(Update, update_camera_viewports);
 
         app.world_mut().spawn((
@@ -222,10 +206,10 @@ mod tests {
             // Verify position based on interpolated type
             match interpolated {
                 Interpolated::Source => {
-                    assert_eq!(viewport.physical_position.x, 4); // Left side
+                    assert_eq!(viewport.physical_position.x, 0); // Left side
                 }
                 Interpolated::Target => {
-                    assert!(viewport.physical_position.x > 4); // Right side
+                    assert!(viewport.physical_position.x > 0); // Right side
                 }
             }
         }

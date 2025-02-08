@@ -12,7 +12,7 @@ use bevy::{
 use crate::{
     draw::Brush,
     util::{window_position_to_world, window_to_world},
-    AppState, Interpolated,
+    AppState,
 };
 
 const RADIUS: f32 = 50.0;
@@ -76,7 +76,7 @@ fn start_select_color(
     >,
     mut materials: ResMut<Assets<HsvMaterial>>,
     window: Single<&Window, With<PrimaryWindow>>,
-    camera_query: Single<(&Camera, &GlobalTransform), Without<Interpolated>>,
+    camera_query: Single<(&Camera, &GlobalTransform), With<IsDefaultUiCamera>>,
 ) {
     let (camera, camera_transform) = *camera_query;
     let (brush_entity, brush_material, mut brush_transform) = brush_control.into_inner();
@@ -105,7 +105,7 @@ fn select_color(
         With<BrushColorControl>,
     >,
     mut materials: ResMut<Assets<HsvMaterial>>,
-    camera_query: Single<(&Camera, &GlobalTransform), Without<Interpolated>>,
+    camera_query: Single<(&Camera, &GlobalTransform), With<IsDefaultUiCamera>>,
 ) {
     let (camera, camera_transform) = *camera_query;
     let (brush_global_transform, brush_material) = brush_control.into_inner();

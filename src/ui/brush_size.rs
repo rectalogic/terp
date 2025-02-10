@@ -10,6 +10,8 @@ use crate::{
     AppState,
 };
 
+use super::{BrushSizeButton, ControlsCamera, CONTROLS_LAYER};
+
 #[derive(Component)]
 struct BrushSizeControl;
 
@@ -17,9 +19,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, setup).add_systems(
         Update,
         (
-            start_resize
-                .run_if(in_state(AppState::Idle))
-                .run_if(run_if_shift_click),
+            start_resize.run_if(in_state(AppState::Idle)),
             (
                 resize.run_if(input_pressed(MouseButton::Left)),
                 end_resize.run_if(input_just_released(MouseButton::Left)),
@@ -27,15 +27,6 @@ pub(super) fn plugin(app: &mut App) {
                 .run_if(in_state(AppState::BrushSize)),
         ),
     );
-}
-
-fn run_if_shift_click(
-    buttons: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
-) -> bool {
-    buttons.just_pressed(MouseButton::Left)
-        && keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight])
-        && !keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
 }
 
 fn setup(
@@ -47,6 +38,7 @@ fn setup(
     commands.spawn((
         BrushSizeControl,
         Visibility::Hidden,
+        CONTROLS_LAYER,
         Mesh2d(meshes.add(Circle::new(0.5))),
         MeshMaterial2d(materials.add(ColorMaterial::from_color(brush.color))),
         Transform::from_scale(Vec3::splat(brush.radius)),
@@ -63,8 +55,12 @@ fn start_resize(
         With<BrushSizeControl>,
     >,
     window: Single<&Window, With<PrimaryWindow>>,
-    camera_query: Single<(&Camera, &GlobalTransform), With<IsDefaultUiCamera>>,
+    camera_query: Single<(&Camera, &GlobalTransform), With<ControlsCamera>>,
+    interaction: Query<&Interaction, (Changed<Interaction>, With<BrushSizeButton>)>,
 ) {
+    if interaction.iter().last() != Some(&Interaction::Pressed) {
+        return;
+    }
     let (camera, camera_transform) = *camera_query;
     let (brush_entity, mut brush_transform, brush_material) = brush_control.into_inner();
     if let Some(material) = materials.get_mut(brush_material) {

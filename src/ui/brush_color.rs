@@ -15,6 +15,8 @@ use crate::{
     AppState,
 };
 
+use super::{BrushColorButton, ControlsCamera, CONTROLS_LAYER};
+
 const RADIUS: f32 = 50.0;
 
 #[derive(Component)]
@@ -25,9 +27,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(
             Update,
             (
-                start_select_color
-                    .run_if(in_state(AppState::Idle))
-                    .run_if(run_if_ctrl_click),
+                start_select_color.run_if(in_state(AppState::Idle)),
                 (
                     select_color.run_if(input_pressed(MouseButton::Left)),
                     end_select_color.run_if(input_just_released(MouseButton::Left)),
@@ -39,15 +39,6 @@ pub(super) fn plugin(app: &mut App) {
     embedded_asset!(app, "shaders/hsv.wgsl")
 }
 
-fn run_if_ctrl_click(
-    buttons: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
-) -> bool {
-    buttons.just_pressed(MouseButton::Left)
-        && keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight])
-        && !keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight])
-}
-
 fn setup(
     mut commands: Commands,
     brush: Res<Brush>,
@@ -57,6 +48,7 @@ fn setup(
     commands.spawn((
         BrushColorControl,
         Visibility::Hidden,
+        CONTROLS_LAYER,
         Mesh2d(meshes.add(Rectangle::new(RADIUS * 2.0, RADIUS * 2.0))),
         MeshMaterial2d(materials.add(HsvMaterial {
             color: brush.color.into(),
@@ -76,8 +68,12 @@ fn start_select_color(
     >,
     mut materials: ResMut<Assets<HsvMaterial>>,
     window: Single<&Window, With<PrimaryWindow>>,
-    camera_query: Single<(&Camera, &GlobalTransform), With<IsDefaultUiCamera>>,
+    camera_query: Single<(&Camera, &GlobalTransform), With<ControlsCamera>>,
+    interaction: Query<&Interaction, (Changed<Interaction>, With<BrushColorButton>)>,
 ) {
+    if interaction.iter().last() != Some(&Interaction::Pressed) {
+        return;
+    }
     let (camera, camera_transform) = *camera_query;
     let (brush_entity, brush_material, mut brush_transform) = brush_control.into_inner();
     if let Some(world_position) = window_to_world(*window, camera, camera_transform) {

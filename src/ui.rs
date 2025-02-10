@@ -1,4 +1,4 @@
-use bevy::{ecs::system::IntoObserverSystem, prelude::*, render::view::RenderLayers};
+use bevy::{prelude::*, render::view::RenderLayers};
 
 use crate::{AppState, Interpolated};
 
@@ -39,14 +39,17 @@ fn setup_ui_camera(mut commands: Commands) {
     ));
 }
 
-fn setup_ui(mut commands: Commands) {
-    let button_state_handler = |state: AppState| {
-        move |mut trigger: Trigger<Pointer<Down>>, mut next_state: ResMut<NextState<AppState>>| {
-            next_state.set(state);
-            trigger.propagate(false);
-        }
-    };
+fn button_state_handler<E>(state: AppState) -> impl FnMut(Trigger<E>, ResMut<NextState<AppState>>)
+where
+    E: Event,
+{
+    move |mut trigger: Trigger<E>, mut next_state: ResMut<NextState<AppState>>| {
+        next_state.set(state);
+        trigger.propagate(false);
+    }
+}
 
+fn setup_ui(mut commands: Commands) {
     commands
         .spawn(Node {
             display: Display::Flex,
@@ -56,6 +59,7 @@ fn setup_ui(mut commands: Commands) {
             height: Val::Percent(100.0),
             ..default()
         })
+        .observe(button_state_handler::<Pointer<Down>>(AppState::Idle))
         .with_children(|parent| {
             // Layout for cameras. Camera viewports track Nodes with CameraLayout
             parent
@@ -70,7 +74,9 @@ fn setup_ui(mut commands: Commands) {
                     },
                     BorderColor(Srgba::rgb(0.4, 0.4, 0.4).into()),
                 ))
-                .observe(button_state_handler(AppState::Draw(Interpolated::Source)));
+                .observe(button_state_handler::<Pointer<Down>>(AppState::Draw(
+                    Interpolated::Source,
+                )));
 
             parent
                 .spawn(Node {
@@ -84,8 +90,12 @@ fn setup_ui(mut commands: Commands) {
                     ..default()
                 })
                 .with_children(|parent| {
-                    spawn_button(parent, "Color", button_state_handler(AppState::BrushColor));
-                    spawn_button(parent, "Size", button_state_handler(AppState::BrushSize));
+                    spawn_button(parent, "Color")
+                        .observe(button_state_handler::<Pointer<Down>>(AppState::BrushColor))
+                        .observe(button_state_handler::<Pointer<Up>>(AppState::Idle));
+                    spawn_button(parent, "Size")
+                        .observe(button_state_handler::<Pointer<Down>>(AppState::BrushSize))
+                        .observe(button_state_handler::<Pointer<Up>>(AppState::Idle));
                 });
 
             parent
@@ -100,42 +110,38 @@ fn setup_ui(mut commands: Commands) {
                     },
                     BorderColor(Srgba::rgb(0.3, 0.3, 0.3).into()),
                 ))
-                .observe(button_state_handler(AppState::Draw(Interpolated::Target)));
+                .observe(button_state_handler::<Pointer<Down>>(AppState::Draw(
+                    Interpolated::Target,
+                )));
         });
 }
 
-fn spawn_button<T, E, B, M>(
-    parent: &mut ChildBuilder,
-    label: T,
-    observer: impl IntoObserverSystem<E, B, M>,
-) where
+fn spawn_button<'a, T>(parent: &'a mut ChildBuilder<'_>, label: T) -> EntityCommands<'a>
+where
     T: Into<String>,
-    E: Event,
-    B: Bundle,
 {
-    parent
-        .spawn((
-            Button,
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Px(40.0),
-                border: UiRect::all(Val::Px(2.0)),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                ..default()
-            },
-            BorderColor(Color::BLACK),
-            BorderRadius::MAX,
-            BackgroundColor(Color::srgb(0.4, 0.4, 0.4)),
-        ))
-        .observe(observer)
-        .with_child((
-            PickingBehavior::IGNORE,
-            Text::new(label.into()),
-            TextFont {
-                font_size: 24.0,
-                ..default()
-            },
-            TextColor(Color::srgb(0.9, 0.9, 0.9)),
-        ));
+    let mut commands = parent.spawn((
+        Button,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Px(40.0),
+            border: UiRect::all(Val::Px(2.0)),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        BorderColor(Color::BLACK),
+        BorderRadius::MAX,
+        BackgroundColor(Color::srgb(0.4, 0.4, 0.4)),
+    ));
+    commands.with_child((
+        PickingBehavior::IGNORE,
+        Text::new(label.into()),
+        TextFont {
+            font_size: 24.0,
+            ..default()
+        },
+        TextColor(Color::srgb(0.9, 0.9, 0.9)),
+    ));
+    commands
 }

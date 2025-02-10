@@ -12,15 +12,15 @@ mod util;
 #[cfg(target_arch = "wasm32")]
 mod webgpu;
 
-#[derive(States, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(States, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum AppState {
     Idle,
-    Draw,
+    Draw(Interpolated),
     BrushSize,
     BrushColor,
 }
 
-#[derive(Component, Clone, PartialEq, Debug)]
+#[derive(Component, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[require(Mesh2d, MeshMaterial2d<points::PointsMaterial>)]
 enum Interpolated {
     Source,

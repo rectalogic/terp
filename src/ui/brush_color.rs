@@ -2,7 +2,6 @@ use std::f32::consts::PI;
 
 use bevy::{
     asset::embedded_asset,
-    input::common_conditions::{input_just_released, input_pressed},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
     sprite::{Material2d, Material2dPlugin},
@@ -15,7 +14,7 @@ use crate::{
     AppState,
 };
 
-use super::{BrushColorButton, ControlsCamera, CONTROLS_LAYER};
+use super::{ControlsCamera, CONTROLS_LAYER};
 
 const RADIUS: f32 = 50.0;
 
@@ -24,17 +23,9 @@ struct BrushColorControl;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, setup)
-        .add_systems(
-            Update,
-            (
-                start_select_color.run_if(in_state(AppState::Idle)),
-                (
-                    select_color.run_if(input_pressed(MouseButton::Left)),
-                    end_select_color.run_if(input_just_released(MouseButton::Left)),
-                )
-                    .run_if(in_state(AppState::BrushColor)),
-            ),
-        )
+        .add_systems(OnEnter(AppState::BrushColor), start_select_color)
+        .add_systems(OnExit(AppState::BrushColor), end_select_color)
+        .add_systems(Update, select_color.run_if(in_state(AppState::BrushColor)))
         .add_plugins(Material2dPlugin::<HsvMaterial>::default());
     embedded_asset!(app, "shaders/hsv.wgsl")
 }
@@ -60,7 +51,6 @@ fn setup(
 
 fn start_select_color(
     mut commands: Commands,
-    mut next_state: ResMut<NextState<AppState>>,
     brush: Res<Brush>,
     brush_control: Single<
         (Entity, &MeshMaterial2d<HsvMaterial>, &mut Transform),
@@ -69,11 +59,7 @@ fn start_select_color(
     mut materials: ResMut<Assets<HsvMaterial>>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera_query: Single<(&Camera, &GlobalTransform), With<ControlsCamera>>,
-    interaction: Query<&Interaction, (Changed<Interaction>, With<BrushColorButton>)>,
 ) {
-    if interaction.iter().last() != Some(&Interaction::Pressed) {
-        return;
-    }
     let (camera, camera_transform) = *camera_query;
     let (brush_entity, brush_material, mut brush_transform) = brush_control.into_inner();
     if let Some(world_position) = window_to_world(*window, camera, camera_transform) {
@@ -89,7 +75,6 @@ fn start_select_color(
             material.value = brush.color.value;
         }
         commands.entity(brush_entity).insert(Visibility::Visible);
-        next_state.set(AppState::BrushColor);
     }
 }
 
@@ -129,10 +114,8 @@ fn select_color(
 
 fn end_select_color(
     mut commands: Commands,
-    mut next_state: ResMut<NextState<AppState>>,
     brush_control: Single<Entity, With<BrushColorControl>>,
 ) {
-    next_state.set(AppState::Idle);
     commands.entity(*brush_control).insert(Visibility::Hidden);
 }
 

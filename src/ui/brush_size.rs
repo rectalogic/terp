@@ -1,8 +1,4 @@
-use bevy::{
-    input::common_conditions::{input_just_released, input_pressed},
-    prelude::*,
-    window::PrimaryWindow,
-};
+use bevy::{prelude::*, window::PrimaryWindow};
 
 use crate::{
     draw::Brush,
@@ -10,23 +6,16 @@ use crate::{
     AppState,
 };
 
-use super::{BrushSizeButton, ControlsCamera, CONTROLS_LAYER};
+use super::{ControlsCamera, CONTROLS_LAYER};
 
 #[derive(Component)]
 struct BrushSizeControl;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Startup, setup).add_systems(
-        Update,
-        (
-            start_resize.run_if(in_state(AppState::Idle)),
-            (
-                resize.run_if(input_pressed(MouseButton::Left)),
-                end_resize.run_if(input_just_released(MouseButton::Left)),
-            )
-                .run_if(in_state(AppState::BrushSize)),
-        ),
-    );
+    app.add_systems(Startup, setup)
+        .add_systems(OnEnter(AppState::BrushSize), start_resize)
+        .add_systems(OnExit(AppState::BrushSize), end_resize)
+        .add_systems(Update, resize.run_if(in_state(AppState::BrushSize)));
 }
 
 fn setup(
@@ -47,7 +36,6 @@ fn setup(
 
 fn start_resize(
     mut commands: Commands,
-    mut next_state: ResMut<NextState<AppState>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     brush: Res<Brush>,
     brush_control: Single<
@@ -56,11 +44,7 @@ fn start_resize(
     >,
     window: Single<&Window, With<PrimaryWindow>>,
     camera_query: Single<(&Camera, &GlobalTransform), With<ControlsCamera>>,
-    interaction: Query<&Interaction, (Changed<Interaction>, With<BrushSizeButton>)>,
 ) {
-    if interaction.iter().last() != Some(&Interaction::Pressed) {
-        return;
-    }
     let (camera, camera_transform) = *camera_query;
     let (brush_entity, mut brush_transform, brush_material) = brush_control.into_inner();
     if let Some(material) = materials.get_mut(brush_material) {
@@ -72,7 +56,6 @@ fn start_resize(
         )
         .with_scale(Vec3::splat(brush.radius * 2.0));
         commands.entity(brush_entity).insert(Visibility::Visible);
-        next_state.set(AppState::BrushSize);
     }
 }
 
@@ -97,11 +80,6 @@ fn resize(
     }
 }
 
-fn end_resize(
-    mut commands: Commands,
-    mut next_state: ResMut<NextState<AppState>>,
-    brush_control: Single<Entity, With<BrushSizeControl>>,
-) {
-    next_state.set(AppState::Idle);
+fn end_resize(mut commands: Commands, brush_control: Single<Entity, With<BrushSizeControl>>) {
     commands.entity(*brush_control).insert(Visibility::Hidden);
 }

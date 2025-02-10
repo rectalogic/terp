@@ -10,7 +10,7 @@ use crate::{
 use anyhow::Result;
 use bevy::{
     ecs::query::{QueryData, QueryEntityError},
-    input::common_conditions::{input_just_pressed, input_just_released},
+    input::common_conditions::{input_just_pressed, input_pressed},
     prelude::*,
     render::view::RenderLayers,
     window::PrimaryWindow,
@@ -20,6 +20,15 @@ pub(super) fn plugin(app: &mut App) {
     app.insert_resource(Brush::default())
         .insert_resource(Undo::default())
         .insert_resource(DrawingCount::default())
+        //XXX how do we handle each Draw state?
+        .add_systems(OnEnter(AppState::Draw(Interpolated::Source)), start_drawing)
+        .add_systems(OnExit(AppState::Draw(Interpolated::Source)), end_drawing)
+        .add_systems(
+            Update,
+            draw.run_if(input_pressed(MouseButton::Left))
+                .run_if(in_state(AppState::Draw(Interpolated::Source))),
+        )
+        //XXX when are we in Idle for undo?
         .add_systems(
             Update,
             (
@@ -27,14 +36,6 @@ pub(super) fn plugin(app: &mut App) {
                 undo_drawing
                     .run_if(input_just_pressed(KeyCode::Backspace))
                     .run_if(in_state(AppState::Idle)),
-                start_drawing
-                    .run_if(in_state(AppState::Idle))
-                    .run_if(run_if_start_drawing),
-                (
-                    draw.run_if(run_if_draw),
-                    end_drawing.run_if(input_just_released(MouseButton::Left)),
-                )
-                    .run_if(in_state(AppState::Draw)),
             ),
         );
 }
@@ -112,29 +113,9 @@ struct MergedDrawing(Entity);
 #[derive(Component)]
 struct DrawingNumber(usize);
 
-fn run_if_start_drawing(
-    buttons: Res<ButtonInput<MouseButton>>,
-    keys: Res<ButtonInput<KeyCode>>,
-) -> bool {
-    // Left button with no modifiers (since they are used for brush configuration)
-    buttons.just_pressed(MouseButton::Left)
-        && !keys.any_pressed([
-            KeyCode::ShiftLeft,
-            KeyCode::ShiftRight,
-            KeyCode::ControlLeft,
-            KeyCode::ControlRight,
-        ])
-}
-
-fn run_if_draw(buttons: Res<ButtonInput<MouseButton>>, keys: Res<ButtonInput<KeyCode>>) -> bool {
-    // Discontiguous drawing, hold Alt (Option) to move without drawing
-    buttons.pressed(MouseButton::Left) && !keys.any_pressed([KeyCode::AltLeft, KeyCode::AltRight])
-}
-
 #[allow(clippy::too_many_arguments)]
 fn start_drawing(
     mut commands: Commands,
-    mut next_state: ResMut<NextState<AppState>>,
     mut drawing_count: ResMut<DrawingCount>,
     brush: Res<Brush>,
     mut undo: ResMut<Undo>,
@@ -193,8 +174,6 @@ fn start_drawing(
                     .id();
 
                 undo.add(entity);
-
-                next_state.set(AppState::Draw);
             }
         }
     }
@@ -209,15 +188,12 @@ struct DrawingQuery {
 
 fn end_drawing(
     mut commands: Commands,
-    mut next_state: ResMut<NextState<AppState>>,
     active_drawing: Single<DrawingQuery, With<ActiveDrawing>>,
     unmerged_drawings: Query<DrawingQuery, (Without<ActiveDrawing>, Without<MergedDrawing>)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut points_materials: ResMut<Assets<PointsMaterial>>,
     mesh_query: Query<(&Mesh2d, &MeshMaterial2d<PointsMaterial>), Without<MergedDrawing>>,
 ) {
-    next_state.set(AppState::Idle);
-
     let active_drawing = active_drawing.into_inner();
     commands
         .entity(active_drawing.entity)

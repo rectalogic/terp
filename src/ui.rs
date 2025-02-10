@@ -1,6 +1,6 @@
-use bevy::{prelude::*, render::view::RenderLayers};
+use bevy::{ecs::system::IntoObserverSystem, prelude::*, render::view::RenderLayers};
 
-use crate::Interpolated;
+use crate::{AppState, Interpolated};
 
 mod brush_color;
 mod brush_size;
@@ -15,12 +15,6 @@ pub(super) struct CameraLayout;
 
 #[derive(Component)]
 pub(super) struct ControlsCamera;
-
-#[derive(Component)]
-pub(super) struct BrushColorButton;
-
-#[derive(Component)]
-pub(super) struct BrushSizeButton;
 
 // Brush color/size controls need to layer on top of UI
 pub(super) const CONTROLS_LAYER: RenderLayers = RenderLayers::layer(3);
@@ -46,6 +40,13 @@ fn setup_ui_camera(mut commands: Commands) {
 }
 
 fn setup_ui(mut commands: Commands) {
+    let button_state_handler = |state: AppState| {
+        move |mut trigger: Trigger<Pointer<Down>>, mut next_state: ResMut<NextState<AppState>>| {
+            next_state.set(state);
+            trigger.propagate(false);
+        }
+    };
+
     commands
         .spawn(Node {
             display: Display::Flex,
@@ -57,17 +58,19 @@ fn setup_ui(mut commands: Commands) {
         })
         .with_children(|parent| {
             // Layout for cameras. Camera viewports track Nodes with CameraLayout
-            parent.spawn((
-                Interpolated::Source,
-                CameraLayout,
-                Node {
-                    border: UiRect::all(Val::Px(4.)),
-                    flex_grow: 1.0,
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-                BorderColor(Srgba::rgb(0.4, 0.4, 0.4).into()),
-            ));
+            parent
+                .spawn((
+                    Interpolated::Source,
+                    CameraLayout,
+                    Node {
+                        border: UiRect::all(Val::Px(4.)),
+                        flex_grow: 1.0,
+                        height: Val::Percent(100.0),
+                        ..default()
+                    },
+                    BorderColor(Srgba::rgb(0.4, 0.4, 0.4).into()),
+                ))
+                .observe(button_state_handler(AppState::Draw(Interpolated::Source)));
 
             parent
                 .spawn(Node {
@@ -81,32 +84,38 @@ fn setup_ui(mut commands: Commands) {
                     ..default()
                 })
                 .with_children(|parent| {
-                    spawn_button(parent, BrushColorButton, "Color");
-                    spawn_button(parent, BrushSizeButton, "Size");
+                    spawn_button(parent, "Color", button_state_handler(AppState::BrushColor));
+                    spawn_button(parent, "Size", button_state_handler(AppState::BrushSize));
                 });
 
-            parent.spawn((
-                Interpolated::Target,
-                CameraLayout,
-                Node {
-                    border: UiRect::all(Val::Px(4.)),
-                    flex_grow: 1.0,
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-                BorderColor(Srgba::rgb(0.3, 0.3, 0.3).into()),
-            ));
+            parent
+                .spawn((
+                    Interpolated::Target,
+                    CameraLayout,
+                    Node {
+                        border: UiRect::all(Val::Px(4.)),
+                        flex_grow: 1.0,
+                        height: Val::Percent(100.0),
+                        ..default()
+                    },
+                    BorderColor(Srgba::rgb(0.3, 0.3, 0.3).into()),
+                ))
+                .observe(button_state_handler(AppState::Draw(Interpolated::Target)));
         });
 }
 
-fn spawn_button<T>(parent: &mut ChildBuilder, component: impl Component, label: T)
-where
+fn spawn_button<T, E, B, M>(
+    parent: &mut ChildBuilder,
+    label: T,
+    observer: impl IntoObserverSystem<E, B, M>,
+) where
     T: Into<String>,
+    E: Event,
+    B: Bundle,
 {
     parent
         .spawn((
             Button,
-            component,
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Px(40.0),
@@ -119,7 +128,9 @@ where
             BorderRadius::MAX,
             BackgroundColor(Color::srgb(0.4, 0.4, 0.4)),
         ))
+        .observe(observer)
         .with_child((
+            PickingBehavior::IGNORE,
             Text::new(label.into()),
             TextFont {
                 font_size: 24.0,

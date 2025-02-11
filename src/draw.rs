@@ -10,7 +10,7 @@ use crate::{
 use anyhow::Result;
 use bevy::{
     ecs::query::{QueryData, QueryEntityError},
-    input::common_conditions::{input_just_pressed, input_pressed},
+    input::common_conditions::input_just_pressed,
     prelude::*,
     render::view::RenderLayers,
     window::PrimaryWindow,
@@ -20,14 +20,11 @@ pub(super) fn plugin(app: &mut App) {
     app.insert_resource(Brush::default())
         .insert_resource(Undo::default())
         .insert_resource(DrawingCount::default())
-        //XXX how do we handle each Draw state?
         .add_systems(OnEnter(AppState::Draw(Interpolated::Source)), start_drawing)
+        .add_systems(OnEnter(AppState::Draw(Interpolated::Target)), start_drawing)
         .add_systems(OnExit(AppState::Draw(Interpolated::Source)), end_drawing)
-        .add_systems(
-            Update,
-            draw.run_if(input_pressed(MouseButton::Left))
-                .run_if(in_state(AppState::Draw(Interpolated::Source))),
-        )
+        .add_systems(OnExit(AppState::Draw(Interpolated::Target)), end_drawing)
+        .add_systems(Update, draw.run_if(draw_condition))
         .add_systems(
             Update,
             (
@@ -112,9 +109,17 @@ struct MergedDrawing(Entity);
 #[derive(Component)]
 struct DrawingNumber(usize);
 
+fn draw_condition(state: Res<State<AppState>>, buttons: Res<ButtonInput<MouseButton>>) -> bool {
+    match state.get() {
+        AppState::Draw(_) => buttons.pressed(MouseButton::Left),
+        _ => false,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn start_drawing(
     mut commands: Commands,
+    state: Res<State<AppState>>,
     mut drawing_count: ResMut<DrawingCount>,
     brush: Res<Brush>,
     mut undo: ResMut<Undo>,
@@ -123,15 +128,16 @@ fn start_drawing(
     window: Single<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&Camera, &RenderLayers, &GlobalTransform, &Interpolated)>,
 ) {
+    let interpolation_type = match state.get() {
+        AppState::Draw(interpolated) => interpolated,
+        _ => return,
+    };
+
     if let Some(window_position) = window.cursor_position() {
         for (camera, camera_render_layers, camera_transform, camera_interpolation_type) in
             &camera_query
         {
-            if !camera
-                .logical_viewport_rect()
-                .unwrap()
-                .contains(window_position)
-            {
+            if camera_interpolation_type != interpolation_type {
                 continue;
             }
 

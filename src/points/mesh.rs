@@ -107,7 +107,7 @@ impl TryFrom<&VertexAttributeValues> for Points {
         match vertices {
             VertexAttributeValues::Float32x3(points) => Ok(Points(
                 points
-                    .into_iter()
+                    .iter()
                     .step_by(3)
                     .map(|p| Vec2::from_slice(&p[0..2]))
                     .collect(),
@@ -212,7 +212,7 @@ mod tests {
         let points = Points(vec![Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0)]);
         let mesh = Mesh::build(&points);
         let result = mesh.to_points();
-        assert_eq!(result.is_err(), true);
+        assert!(result.is_err());
     }
 
     #[test]

@@ -166,7 +166,7 @@ mod tests {
         app.update();
 
         let events = app.world().resource::<Events<SaveProjectData>>();
-        assert!(events.len() > 0);
+        assert!(!events.is_empty());
 
         let mut event_cursor = events.get_cursor();
         let event = event_cursor.read(events).last().unwrap();

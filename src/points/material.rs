@@ -89,9 +89,9 @@ mod tests {
             color: LinearRgba::default(),
             radius: 1.0,
         };
-        let cloned = settings.clone();
+        let copied = settings;
 
-        assert_eq!(settings.color, cloned.color);
-        assert_eq!(settings.radius, cloned.radius);
+        assert_eq!(settings.color, copied.color);
+        assert_eq!(settings.radius, copied.radius);
     }
 }

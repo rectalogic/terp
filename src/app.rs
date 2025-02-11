@@ -41,8 +41,8 @@ fn title_suffix(title: &str, args: &cli::Args) -> String {
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
         let (title, rez) = match self {
-            AppPlugin::Editor(args) => (title_suffix("Terp", &args), (1200., 600.)),
-            AppPlugin::Player(args) => (title_suffix("Terp Player", &args), (600., 600.)),
+            AppPlugin::Editor(args) => (title_suffix("Terp", args), (1200., 600.)),
+            AppPlugin::Player(args) => (title_suffix("Terp Player", args), (600., 600.)),
         };
         let default_plugins = DefaultPlugins
             .set(WindowPlugin {

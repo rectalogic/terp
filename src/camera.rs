@@ -59,6 +59,7 @@ struct CameraQuery {
     camera: &'static mut Camera,
 }
 
+#[allow(clippy::type_complexity)]
 fn update_camera_viewports(
     layout_query: Query<
         LayoutQuery,
@@ -122,7 +123,7 @@ mod tests {
         let mut query = app
             .world_mut()
             .query::<(&Camera2d, &RenderLayers, &Interpolated)>();
-        let results: Vec<_> = query.iter(&app.world()).collect();
+        let results: Vec<_> = query.iter(app.world()).collect();
 
         assert_eq!(results.len(), 1);
         assert_eq!(*results[0].1, SOURCE_LAYER);
@@ -139,7 +140,7 @@ mod tests {
         let mut camera_query = app
             .world_mut()
             .query::<(&Camera2d, &RenderLayers, &Interpolated)>();
-        let cameras: Vec<_> = camera_query.iter(&app.world()).collect();
+        let cameras: Vec<_> = camera_query.iter(app.world()).collect();
 
         assert_eq!(cameras.len(), 2);
         assert_ne!(cameras[0].1, cameras[1].1);
@@ -148,7 +149,7 @@ mod tests {
         let mut layout_query = app
             .world_mut()
             .query_filtered::<&Interpolated, With<CameraLayout>>();
-        let layouts: Vec<_> = layout_query.iter(&app.world()).collect();
+        let layouts: Vec<_> = layout_query.iter(app.world()).collect();
 
         assert_eq!(layouts.len(), 2);
         assert_ne!(layouts[0], layouts[1]);
@@ -159,16 +160,16 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((
             MinimalPlugins,
-            bevy::transform::TransformPlugin::default(),
-            bevy::render::camera::CameraPlugin::default(),
+            bevy::transform::TransformPlugin,
+            bevy::render::camera::CameraPlugin,
             bevy::asset::AssetPlugin::default(),
             bevy::ui::UiPlugin {
                 enable_rendering: false,
                 add_picking: false,
             },
-            bevy::input::InputPlugin::default(),
+            bevy::input::InputPlugin,
             bevy::render::texture::ImagePlugin::default(),
-            bevy::text::TextPlugin::default(),
+            bevy::text::TextPlugin,
             bevy::window::WindowPlugin::default(),
         ))
         .init_asset::<TextureAtlasLayout>()
@@ -189,7 +190,7 @@ mod tests {
         app.update();
 
         let mut query = app.world_mut().query::<(&Camera, &Interpolated)>();
-        let cameras: Vec<_> = query.iter(&app.world()).collect();
+        let cameras: Vec<_> = query.iter(app.world()).collect();
 
         assert_eq!(cameras.len(), 2);
         for (camera, interpolated) in cameras {

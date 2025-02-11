@@ -28,7 +28,6 @@ pub(super) fn plugin(app: &mut App) {
             draw.run_if(input_pressed(MouseButton::Left))
                 .run_if(in_state(AppState::Draw(Interpolated::Source))),
         )
-        //XXX when are we in Idle for undo?
         .add_systems(
             Update,
             (
@@ -96,7 +95,7 @@ struct UndoIter<'a> {
     undo: &'a mut Undo,
 }
 
-impl<'a> Iterator for UndoIter<'a> {
+impl Iterator for UndoIter<'_> {
     type Item = Entity;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -156,7 +155,7 @@ fn start_drawing(
                         ActiveDrawing,
                         DrawingNumber(count),
                         camera_render_layers.clone(),
-                        camera_interpolation_type.clone(),
+                        *camera_interpolation_type,
                         Mesh2d(meshes.add(Mesh::build(&Points(vec![world_position])))),
                         Transform::from_xyz(0., 0., count as f32), // use count as Z index
                         MeshMaterial2d(materials.add(PointsMaterial {

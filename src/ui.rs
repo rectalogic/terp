@@ -7,8 +7,27 @@ mod brush_size;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, (setup_ui_camera, setup_ui))
+        .add_systems(
+            OnEnter(AppState::Draw(Interpolated::Source)),
+            active_color_handler,
+        )
+        .add_systems(
+            OnEnter(AppState::Draw(Interpolated::Target)),
+            active_color_handler,
+        )
+        .add_systems(
+            OnExit(AppState::Draw(Interpolated::Source)),
+            active_color_handler,
+        )
+        .add_systems(
+            OnExit(AppState::Draw(Interpolated::Source)),
+            active_color_handler,
+        )
         .add_plugins((brush_size::plugin, brush_color::plugin));
 }
+
+const INACTIVE_COLOR: Color = Color::Srgba(Srgba::rgb(0.4, 0.4, 0.4));
+const ACTIVE_COLOR: Color = Color::Srgba(Srgba::rgb(0.7, 0.7, 0.0));
 
 #[derive(Component)]
 pub(super) struct CameraLayout;
@@ -49,6 +68,28 @@ where
     }
 }
 
+fn active_color_handler(
+    state: Res<State<AppState>>,
+    mut borders: Query<(&mut BorderColor, &Interpolated), With<CameraLayout>>,
+) {
+    match state.get() {
+        AppState::Draw(interpolated) => {
+            for (mut border_color, border_interpolated) in borders.iter_mut() {
+                if border_interpolated == interpolated {
+                    border_color.0 = ACTIVE_COLOR;
+                } else {
+                    border_color.0 = INACTIVE_COLOR;
+                }
+            }
+        }
+        _ => {
+            for (mut border_color, _) in borders.iter_mut() {
+                border_color.0 = INACTIVE_COLOR;
+            }
+        }
+    }
+}
+
 fn setup_ui(mut commands: Commands) {
     commands
         .spawn(Node {
@@ -72,7 +113,7 @@ fn setup_ui(mut commands: Commands) {
                         height: Val::Percent(100.0),
                         ..default()
                     },
-                    BorderColor(Srgba::rgb(0.4, 0.4, 0.4).into()),
+                    BorderColor(INACTIVE_COLOR),
                 ))
                 .observe(button_state_handler::<Pointer<Down>>(AppState::Draw(
                     Interpolated::Source,
@@ -108,7 +149,7 @@ fn setup_ui(mut commands: Commands) {
                         height: Val::Percent(100.0),
                         ..default()
                     },
-                    BorderColor(Srgba::rgb(0.3, 0.3, 0.3).into()),
+                    BorderColor(INACTIVE_COLOR),
                 ))
                 .observe(button_state_handler::<Pointer<Down>>(AppState::Draw(
                     Interpolated::Target,

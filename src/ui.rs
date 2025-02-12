@@ -1,28 +1,12 @@
-use bevy::{prelude::*, render::view::RenderLayers};
-
 use crate::{AppState, Interpolated};
+use bevy::{prelude::*, render::view::RenderLayers};
 
 mod brush_color;
 mod brush_size;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, (setup_ui_camera, setup_ui))
-        .add_systems(
-            OnEnter(AppState::Draw(Interpolated::Source)),
-            active_color_handler,
-        )
-        .add_systems(
-            OnEnter(AppState::Draw(Interpolated::Target)),
-            active_color_handler,
-        )
-        .add_systems(
-            OnExit(AppState::Draw(Interpolated::Source)),
-            active_color_handler,
-        )
-        .add_systems(
-            OnExit(AppState::Draw(Interpolated::Source)),
-            active_color_handler,
-        )
+        .add_systems(Update, active_color_handler)
         .add_plugins((brush_size::plugin, brush_color::plugin));
 }
 
@@ -69,22 +53,31 @@ where
 }
 
 fn active_color_handler(
-    state: Res<State<AppState>>,
+    mut transitions: EventReader<StateTransitionEvent<AppState>>,
     mut borders: Query<(&mut BorderColor, &Interpolated), With<CameraLayout>>,
 ) {
-    match state.get() {
-        AppState::Draw(interpolated) => {
-            for (mut border_color, border_interpolated) in borders.iter_mut() {
-                if border_interpolated == interpolated {
-                    border_color.0 = ACTIVE_COLOR;
-                } else {
-                    border_color.0 = INACTIVE_COLOR;
-                }
-            }
+    let Some(StateTransitionEvent {
+        exited: Some(exited),
+        entered: Some(entered),
+    }) = transitions.read().last()
+    else {
+        return;
+    };
+    info!("active_color_handler {:?}->{:?}", exited, entered); //XXX
+    if exited == entered {
+        return;
+    }
+
+    if let AppState::Draw(_) = exited {
+        for (mut border_color, _) in borders.iter_mut() {
+            border_color.0 = INACTIVE_COLOR;
         }
-        _ => {
-            for (mut border_color, _) in borders.iter_mut() {
-                border_color.0 = INACTIVE_COLOR;
+    }
+
+    if let AppState::Draw(interpolated) = entered {
+        for (mut border_color, border_interpolated) in borders.iter_mut() {
+            if border_interpolated == interpolated {
+                border_color.0 = ACTIVE_COLOR;
             }
         }
     }

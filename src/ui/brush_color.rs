@@ -81,21 +81,18 @@ fn start_select_color(
 fn select_color(
     mut cursor: EventReader<CursorMoved>,
     mut brush: ResMut<Brush>,
-    brush_control: Single<
-        (&GlobalTransform, &MeshMaterial2d<HsvMaterial>),
-        With<BrushColorControl>,
-    >,
+    brush_control: Single<(&Transform, &MeshMaterial2d<HsvMaterial>), With<BrushColorControl>>,
     mut materials: ResMut<Assets<HsvMaterial>>,
     camera_query: Single<(&Camera, &GlobalTransform), With<IsDefaultUiCamera>>,
 ) {
     let (camera, camera_transform) = *camera_query;
-    let (brush_global_transform, brush_material) = brush_control.into_inner();
+    let (brush_transform, brush_material) = brush_control.into_inner();
     for moved in cursor.read() {
         if let Some(world_position) =
             window_position_to_world(camera, camera_transform, moved.position)
         {
-            let origin = brush_global_transform.transform_point(Vec3::ZERO).xy();
-            let right = brush_global_transform.transform_point(Vec3::X).xy();
+            let origin = brush_transform.transform_point(Vec3::ZERO).xy();
+            let right = brush_transform.transform_point(Vec3::X).xy();
             let distance = (world_position.distance(origin) / RADIUS).clamp(0.0, 1.0);
             let angle = if distance != 0. {
                 ((origin - world_position).angle_to(origin - right) + PI).to_degrees()

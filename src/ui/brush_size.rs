@@ -62,16 +62,16 @@ fn start_resize(
 fn resize(
     mut cursor: EventReader<CursorMoved>,
     mut brush: ResMut<Brush>,
-    brush_control: Single<(&mut Transform, &GlobalTransform), With<BrushSizeControl>>,
+    brush_control: Single<&mut Transform, With<BrushSizeControl>>,
     camera_query: Single<(&Camera, &GlobalTransform), With<IsDefaultUiCamera>>,
 ) {
     let (camera, camera_transform) = *camera_query;
-    let (mut brush_transform, brush_global_transform) = brush_control.into_inner();
+    let mut brush_transform = brush_control.into_inner();
     for moved in cursor.read() {
         if let Some(world_position) =
             window_position_to_world(camera, camera_transform, moved.position)
         {
-            let scale = brush_global_transform
+            let scale = brush_transform
                 .transform_point(Vec3::ZERO)
                 .distance(Vec3::from((world_position, 0.)));
             brush.radius = scale;

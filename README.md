@@ -14,10 +14,10 @@ Demos require a web browser that supports [WebGPU](https://caniuse.com/webgpu).
 
 ## Controls
 
-Drag in left or right viewport to draw (hold down Alt/Option to drag without drawing).
+Drag in left or right viewport to draw.
 Corresponding left/right drawings will be interpolated.
-* `Shift`-drag to set brush size
-* `Ctrl`-drag to set brush color
+* `Size` button - click and drag to resize
+* `Color` button - click and drag to change color
 * `Spacebar` to toggle interpolation
 * `Backspace` to undo last drawing
 * `S` to save project (if run with `terp editor --project .../path/to/project.terp`)

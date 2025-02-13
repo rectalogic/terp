@@ -27,7 +27,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(OnExit(AppState::BrushColor), end_select_color)
         .add_systems(Update, select_color.run_if(in_state(AppState::BrushColor)))
         .add_plugins(Material2dPlugin::<HsvMaterial>::default());
-    embedded_asset!(app, "shaders/hsv.wgsl")
+    embedded_asset!(app, "shaders/hsv.wgsl");
 }
 
 fn setup(

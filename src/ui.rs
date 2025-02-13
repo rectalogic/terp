@@ -1,5 +1,5 @@
 use crate::{AppState, Interpolated};
-use bevy::{prelude::*, render::view::RenderLayers};
+use bevy::{asset::embedded_asset, prelude::*, render::view::RenderLayers};
 
 mod brush_color;
 mod brush_size;
@@ -8,6 +8,9 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, (setup_ui_camera, setup_ui))
         .add_systems(Update, active_color_handler)
         .add_plugins((brush_size::plugin, brush_color::plugin));
+
+    embedded_asset!(app, "ui/images/color-wheel.png");
+    embedded_asset!(app, "ui/images/resize.png");
 }
 
 const INACTIVE_COLOR: Color = Color::Srgba(Srgba::rgb(0.4, 0.4, 0.4));
@@ -63,7 +66,6 @@ fn active_color_handler(
     else {
         return;
     };
-    info!("active_color_handler {:?}->{:?}", exited, entered); //XXX
     if exited == entered {
         return;
     }
@@ -83,7 +85,7 @@ fn active_color_handler(
     }
 }
 
-fn setup_ui(mut commands: Commands) {
+fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(Node {
             display: Display::Flex,
@@ -118,18 +120,32 @@ fn setup_ui(mut commands: Commands) {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
-                    width: Val::Px(100.0),
+                    width: Val::Px(70.0),
                     height: Val::Percent(100.0),
                     flex_shrink: 0.0,
                     ..default()
                 })
                 .with_children(|parent| {
-                    spawn_button(parent, "Color")
-                        .observe(button_state_handler::<Pointer<Down>>(AppState::BrushColor))
-                        .observe(button_state_handler::<Pointer<Up>>(AppState::Idle));
-                    spawn_button(parent, "Size")
-                        .observe(button_state_handler::<Pointer<Down>>(AppState::BrushSize))
-                        .observe(button_state_handler::<Pointer<Up>>(AppState::Idle));
+                    spawn_button(
+                        parent,
+                        asset_server.load(concat!(
+                            "embedded://",
+                            env!("CARGO_PKG_NAME"),
+                            "/ui/images/color-wheel.png"
+                        )),
+                    )
+                    .observe(button_state_handler::<Pointer<Down>>(AppState::BrushColor))
+                    .observe(button_state_handler::<Pointer<DragEnd>>(AppState::Idle));
+                    spawn_button(
+                        parent,
+                        asset_server.load(concat!(
+                            "embedded://",
+                            env!("CARGO_PKG_NAME"),
+                            "/ui/images/resize.png"
+                        )),
+                    )
+                    .observe(button_state_handler::<Pointer<Down>>(AppState::BrushSize))
+                    .observe(button_state_handler::<Pointer<DragEnd>>(AppState::Idle));
                 });
 
             parent
@@ -150,32 +166,17 @@ fn setup_ui(mut commands: Commands) {
         });
 }
 
-fn spawn_button<'a, T>(parent: &'a mut ChildBuilder<'_>, label: T) -> EntityCommands<'a>
-where
-    T: Into<String>,
-{
-    let mut commands = parent.spawn((
+fn spawn_button<'a>(parent: &'a mut ChildBuilder<'_>, image: Handle<Image>) -> EntityCommands<'a> {
+    parent.spawn((
         Button,
+        ImageNode::new(image),
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Px(40.0),
-            border: UiRect::all(Val::Px(2.0)),
+            border: UiRect::all(Val::Px(4.0)),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             ..default()
         },
-        BorderColor(Color::BLACK),
         BorderRadius::MAX,
         BackgroundColor(Color::srgb(0.4, 0.4, 0.4)),
-    ));
-    commands.with_child((
-        PickingBehavior::IGNORE,
-        Text::new(label.into()),
-        TextFont {
-            font_size: 24.0,
-            ..default()
-        },
-        TextColor(Color::srgb(0.9, 0.9, 0.9)),
-    ));
-    commands
+    ))
 }

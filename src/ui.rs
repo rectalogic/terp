@@ -119,9 +119,10 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .spawn(Node {
                     display: Display::Flex,
                     flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(20.0),
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
-                    width: Val::Px(70.0),
+                    width: Val::Px(85.0),
                     height: Val::Percent(100.0),
                     flex_shrink: 0.0,
                     ..default()

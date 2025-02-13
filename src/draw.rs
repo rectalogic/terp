@@ -10,7 +10,6 @@ use crate::{
 use anyhow::Result;
 use bevy::{
     ecs::query::{QueryData, QueryEntityError},
-    input::common_conditions::input_just_pressed,
     prelude::*,
     render::view::RenderLayers,
     window::PrimaryWindow,
@@ -20,6 +19,7 @@ pub(super) fn plugin(app: &mut App) {
     app.insert_resource(Brush::default())
         .insert_resource(Undo::default())
         .insert_resource(DrawingCount::default())
+        .add_event::<UndoEvent>()
         .add_systems(OnEnter(AppState::Draw(Interpolated::Source)), start_drawing)
         .add_systems(OnEnter(AppState::Draw(Interpolated::Target)), start_drawing)
         .add_systems(OnExit(AppState::Draw(Interpolated::Source)), end_drawing)
@@ -29,9 +29,7 @@ pub(super) fn plugin(app: &mut App) {
             Update,
             (
                 load_project.pipe(error_handler),
-                undo_drawing
-                    .run_if(input_just_pressed(KeyCode::Backspace))
-                    .run_if(in_state(AppState::Idle)),
+                undo_drawing.run_if(in_state(AppState::Idle)),
             ),
         );
 }
@@ -41,6 +39,9 @@ pub(super) fn player_plugin(app: &mut App) {
         .insert_resource(DrawingCount::default())
         .add_systems(Update, load_project.pipe(error_handler));
 }
+
+#[derive(Event, Default, Debug)]
+pub(super) struct UndoEvent;
 
 #[derive(Resource, Copy, Clone)]
 pub(crate) struct Brush {
@@ -289,19 +290,22 @@ fn undo_drawing(
     mut undo: ResMut<Undo>,
     mut drawing_count: ResMut<DrawingCount>,
     drawings: Query<(DrawingQuery, Option<&MergedDrawing>)>,
+    mut events: EventReader<UndoEvent>,
 ) {
-    if let Some(entity) = undo.undo() {
-        if let Ok((drawing, merged_drawing)) = drawings.get(entity) {
-            if let Some(merged_drawing) = merged_drawing {
-                commands
-                    .entity(merged_drawing.0)
-                    .remove::<(Animatable, MergedDrawing)>();
-            };
-            match drawing.interpolation {
-                Interpolated::Source => drawing_count.source = drawing.number.0 - 1,
-                Interpolated::Target => drawing_count.target = drawing.number.0 - 1,
-            };
-            commands.entity(entity).despawn();
+    for _ in events.read() {
+        if let Some(entity) = undo.undo() {
+            if let Ok((drawing, merged_drawing)) = drawings.get(entity) {
+                if let Some(merged_drawing) = merged_drawing {
+                    commands
+                        .entity(merged_drawing.0)
+                        .remove::<(Animatable, MergedDrawing)>();
+                };
+                match drawing.interpolation {
+                    Interpolated::Source => drawing_count.source = drawing.number.0 - 1,
+                    Interpolated::Target => drawing_count.target = drawing.number.0 - 1,
+                };
+                commands.entity(entity).despawn();
+            }
         }
     }
 }

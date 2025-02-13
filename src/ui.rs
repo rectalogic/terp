@@ -1,4 +1,4 @@
-use crate::{AppState, Interpolated};
+use crate::{draw::UndoEvent, AppState, Interpolated};
 use bevy::{asset::embedded_asset, prelude::*, render::view::RenderLayers};
 
 mod brush_color;
@@ -11,6 +11,7 @@ pub(super) fn plugin(app: &mut App) {
 
     embedded_asset!(app, "ui/images/color-wheel.png");
     embedded_asset!(app, "ui/images/resize.png");
+    embedded_asset!(app, "ui/images/undo.png");
 }
 
 const INACTIVE_COLOR: Color = Color::Srgba(Srgba::rgb(0.4, 0.4, 0.4));
@@ -146,6 +147,20 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                     )
                     .observe(button_state_handler::<Pointer<Down>>(AppState::BrushSize))
                     .observe(button_state_handler::<Pointer<DragEnd>>(AppState::Idle));
+                    spawn_button(
+                        parent,
+                        asset_server.load(concat!(
+                            "embedded://",
+                            env!("CARGO_PKG_NAME"),
+                            "/ui/images/undo.png"
+                        )),
+                    )
+                    .observe(
+                        move |mut trigger: Trigger<Pointer<Click>>, mut commands: Commands| {
+                            commands.send_event(UndoEvent);
+                            trigger.propagate(false);
+                        },
+                    );
                 });
 
             parent
@@ -167,16 +182,17 @@ fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn spawn_button<'a>(parent: &'a mut ChildBuilder<'_>, image: Handle<Image>) -> EntityCommands<'a> {
-    parent.spawn((
+    let mut commands = parent.spawn((
         Button,
-        ImageNode::new(image),
         Node {
-            border: UiRect::all(Val::Px(4.0)),
+            padding: UiRect::all(Val::Px(10.0)),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             ..default()
         },
         BorderRadius::MAX,
         BackgroundColor(Color::srgb(0.4, 0.4, 0.4)),
-    ))
+    ));
+    commands.with_child(ImageNode::new(image));
+    commands
 }

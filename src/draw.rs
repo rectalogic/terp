@@ -12,7 +12,6 @@ use bevy::{
     ecs::query::{QueryData, QueryEntityError},
     prelude::*,
     render::view::RenderLayers,
-    window::PrimaryWindow,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -126,62 +125,53 @@ fn start_drawing(
     mut undo: ResMut<Undo>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<PointsMaterial>>,
-    window: Single<&Window, With<PrimaryWindow>>,
-    camera_query: Query<(&Camera, &RenderLayers, &GlobalTransform, &Interpolated)>,
+    camera_query: Query<(&RenderLayers, &Interpolated)>,
 ) {
     let interpolation_type = match state.get() {
         AppState::Draw(interpolated) => interpolated,
         _ => return,
     };
 
-    if let Some(window_position) = window.cursor_position() {
-        for (camera, camera_render_layers, camera_transform, camera_interpolation_type) in
-            &camera_query
-        {
-            if camera_interpolation_type != interpolation_type {
-                continue;
-            }
-
-            let count = match camera_interpolation_type {
-                Interpolated::Source => {
-                    drawing_count.source += 1;
-                    drawing_count.source
-                }
-
-                Interpolated::Target => {
-                    drawing_count.target += 1;
-                    drawing_count.target
-                }
-            };
-
-            if let Some(world_position) =
-                window_position_to_world(camera, camera_transform, window_position)
-            {
-                let entity = commands
-                    .spawn((
-                        ActiveDrawing,
-                        DrawingNumber(count),
-                        camera_render_layers.clone(),
-                        *camera_interpolation_type,
-                        Mesh2d(meshes.add(Mesh::build(&Points(vec![world_position])))),
-                        Transform::from_xyz(0., 0., count as f32), // use count as Z index
-                        MeshMaterial2d(materials.add(PointsMaterial {
-                            source_settings: PointsSettings {
-                                color: brush.color.into(),
-                                radius: brush.radius,
-                            },
-                            target_settings: PointsSettings {
-                                color: brush.color.into(),
-                                radius: brush.radius,
-                            },
-                            t: 0.0,
-                        })),
-                    ))
-                    .id();
-
-                undo.add(entity);
-            }
+    for (camera_render_layers, camera_interpolation_type) in &camera_query {
+        if camera_interpolation_type != interpolation_type {
+            continue;
         }
+
+        let count = match camera_interpolation_type {
+            Interpolated::Source => {
+                drawing_count.source += 1;
+                drawing_count.source
+            }
+
+            Interpolated::Target => {
+                drawing_count.target += 1;
+                drawing_count.target
+            }
+        };
+
+        let entity = commands
+            .spawn((
+                ActiveDrawing,
+                DrawingNumber(count),
+                camera_render_layers.clone(),
+                *camera_interpolation_type,
+                Mesh2d(meshes.add(Mesh::build(None))),
+                Transform::from_xyz(0., 0., count as f32), // use count as Z index
+                MeshMaterial2d(materials.add(PointsMaterial {
+                    source_settings: PointsSettings {
+                        color: brush.color.into(),
+                        radius: brush.radius,
+                    },
+                    target_settings: PointsSettings {
+                        color: brush.color.into(),
+                        radius: brush.radius,
+                    },
+                    t: 0.0,
+                })),
+            ))
+            .id();
+
+        undo.add(entity);
     }
 }
 

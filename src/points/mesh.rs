@@ -118,7 +118,8 @@ impl TryFrom<&VertexAttributeValues> for Points {
 }
 
 pub(crate) trait PointsMeshBuilder {
-    fn build(points: &Points) -> Mesh;
+    fn empty() -> Mesh;
+    fn build(points: Option<&Points>) -> Mesh;
     fn build_interpolated<T>(source: T, target: T) -> Result<Mesh>
     where
         T: Into<VertexAttributeValues>;
@@ -126,12 +127,24 @@ pub(crate) trait PointsMeshBuilder {
 }
 
 impl PointsMeshBuilder for Mesh {
-    fn build(points: &Points) -> Mesh {
+    fn empty() -> Mesh {
         Mesh::new(
             bevy::render::mesh::PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
         )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, points)
+    }
+
+    fn build(points: Option<&Points>) -> Mesh {
+        let mut mesh = Mesh::empty();
+        if let Some(points) = points {
+            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, points);
+        } else {
+            mesh.insert_attribute(
+                Mesh::ATTRIBUTE_POSITION,
+                VertexAttributeValues::Float32x3(Vec::new()),
+            );
+        }
+        mesh
     }
 
     fn build_interpolated<T>(source: T, target: T) -> Result<Mesh>
@@ -145,12 +158,9 @@ impl PointsMeshBuilder for Mesh {
                 "source and target have different number of vertices"
             ));
         }
-        Ok(Mesh::new(
-            bevy::render::mesh::PrimitiveTopology::TriangleList,
-            RenderAssetUsages::default(),
-        )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, source)
-        .with_inserted_attribute(ATTRIBUTE_TARGET_POSITION, target))
+        Ok(Mesh::empty()
+            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, source)
+            .with_inserted_attribute(ATTRIBUTE_TARGET_POSITION, target))
     }
 
     fn to_points(&self) -> Result<(Points, Points), &'static str> {
@@ -210,7 +220,7 @@ mod tests {
     #[test]
     fn test_mesh_builder() {
         let points = Points(vec![Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0)]);
-        let mesh = Mesh::build(&points);
+        let mesh = Mesh::build(Some(&points));
         let result = mesh.to_points();
         assert!(result.is_err());
     }

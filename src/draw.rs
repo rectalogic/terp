@@ -11,7 +11,6 @@ use anyhow::Result;
 use bevy::{
     ecs::query::{QueryData, QueryEntityError},
     prelude::*,
-    render::view::RenderLayers,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -125,54 +124,47 @@ fn start_drawing(
     mut undo: ResMut<Undo>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<PointsMaterial>>,
-    camera_query: Query<(&RenderLayers, &Interpolated)>,
 ) {
     let interpolation_type = match state.get() {
         AppState::Draw(interpolated) => interpolated,
         _ => return,
     };
 
-    for (camera_render_layers, camera_interpolation_type) in &camera_query {
-        if camera_interpolation_type != interpolation_type {
-            continue;
+    let (count, render_layers) = match interpolation_type {
+        Interpolated::Source => {
+            drawing_count.source += 1;
+            (drawing_count.source, SOURCE_LAYER)
         }
 
-        let count = match camera_interpolation_type {
-            Interpolated::Source => {
-                drawing_count.source += 1;
-                drawing_count.source
-            }
+        Interpolated::Target => {
+            drawing_count.target += 1;
+            (drawing_count.target, TARGET_LAYER)
+        }
+    };
 
-            Interpolated::Target => {
-                drawing_count.target += 1;
-                drawing_count.target
-            }
-        };
+    let entity = commands
+        .spawn((
+            ActiveDrawing,
+            DrawingNumber(count),
+            render_layers,
+            *interpolation_type,
+            Mesh2d(meshes.add(Mesh::build(None))),
+            Transform::from_xyz(0., 0., count as f32), // use count as Z index
+            MeshMaterial2d(materials.add(PointsMaterial {
+                source_settings: PointsSettings {
+                    color: brush.color.into(),
+                    radius: brush.radius,
+                },
+                target_settings: PointsSettings {
+                    color: brush.color.into(),
+                    radius: brush.radius,
+                },
+                t: 0.0,
+            })),
+        ))
+        .id();
 
-        let entity = commands
-            .spawn((
-                ActiveDrawing,
-                DrawingNumber(count),
-                camera_render_layers.clone(),
-                *camera_interpolation_type,
-                Mesh2d(meshes.add(Mesh::build(None))),
-                Transform::from_xyz(0., 0., count as f32), // use count as Z index
-                MeshMaterial2d(materials.add(PointsMaterial {
-                    source_settings: PointsSettings {
-                        color: brush.color.into(),
-                        radius: brush.radius,
-                    },
-                    target_settings: PointsSettings {
-                        color: brush.color.into(),
-                        radius: brush.radius,
-                    },
-                    t: 0.0,
-                })),
-            ))
-            .id();
-
-        undo.add(entity);
-    }
+    undo.add(entity);
 }
 
 #[derive(QueryData)]
@@ -253,14 +245,20 @@ fn end_drawing(
 
 fn draw(
     mut cursor: EventReader<CursorMoved>,
-    drawing: Single<(&Mesh2d, &RenderLayers), With<ActiveDrawing>>,
+    drawing: Single<&Mesh2d, With<ActiveDrawing>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    camera_query: Query<(&Camera, &RenderLayers, &GlobalTransform)>,
+    camera_query: Query<(&Camera, &Interpolated, &GlobalTransform)>,
+    state: Res<State<AppState>>,
 ) {
-    let (mesh2d, drawing_render_layers) = *drawing;
+    let interpolation_type = match state.get() {
+        AppState::Draw(interpolated) => interpolated,
+        _ => return,
+    };
+
+    let mesh2d = *drawing;
     if let Some(mesh) = meshes.get_mut(mesh2d) {
-        for (camera, camera_render_layers, camera_transform) in &camera_query {
-            if !camera_render_layers.intersects(drawing_render_layers) {
+        for (camera, camera_interpolation_type, camera_transform) in &camera_query {
+            if camera_interpolation_type != interpolation_type {
                 continue;
             }
 

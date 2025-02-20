@@ -1,4 +1,4 @@
-use crate::{draw::UndoEvent, AppState, Interpolated};
+use crate::{AppState, Interpolated, draw::UndoEvent};
 use bevy::{asset::embedded_asset, prelude::*, render::view::RenderLayers};
 
 mod brush_color;

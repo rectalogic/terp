@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use super::ATTRIBUTE_TARGET_POSITION;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bevy::{asset::RenderAssetUsages, prelude::*, render::mesh::VertexAttributeValues};
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +10,7 @@ pub(crate) struct Points(pub Vec<Vec2>);
 
 impl Points {
     pub(crate) fn append(mesh: &mut Mesh, point: Vec2) {
-        if let Some(VertexAttributeValues::Float32x3(ref mut positions)) =
+        if let Some(VertexAttributeValues::Float32x3(positions)) =
             mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION)
         {
             positions.reserve(3);
@@ -23,12 +23,12 @@ impl Points {
 
     // Merge target into source interpolated
     pub(crate) fn interpolate(source: &mut Mesh, target: &Mesh) {
-        let Some(VertexAttributeValues::Float32x3(ref mut source_positions)) =
+        let Some(VertexAttributeValues::Float32x3(source_positions)) =
             source.attribute_mut(Mesh::ATTRIBUTE_POSITION)
         else {
             return;
         };
-        let Some(VertexAttributeValues::Float32x3(ref target_positions)) =
+        let Some(VertexAttributeValues::Float32x3(target_positions)) =
             target.attribute(Mesh::ATTRIBUTE_POSITION)
         else {
             return;
@@ -241,7 +241,9 @@ mod tests {
     fn test_padding() {
         assert_eq!(
             Points::pad_positions(&[1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4], 7 * 3),
-            vec![1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4,]
+            vec![
+                1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4,
+            ]
         );
         assert_eq!(
             Points::pad_positions(&[1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4], 14 * 3),

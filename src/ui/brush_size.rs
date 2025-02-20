@@ -1,12 +1,12 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
 use crate::{
+    AppState,
     draw::Brush,
     util::{window_position_to_world, window_to_world},
-    AppState,
 };
 
-use super::{ControlsCamera, CONTROLS_LAYER};
+use super::{CONTROLS_LAYER, ControlsCamera};
 
 #[derive(Component)]
 struct BrushSizeControl;

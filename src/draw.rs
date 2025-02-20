@@ -1,11 +1,11 @@
 use crate::{
+    AppState, Interpolated,
     animation::Animatable,
     camera::{SOURCE_LAYER, TARGET_LAYER},
     error_handler,
     points::{Points, PointsMaterial, PointsMeshBuilder, PointsSettings},
     project::LoadProject,
     util::window_position_to_world,
-    AppState, Interpolated,
 };
 use anyhow::Result;
 use bevy::{

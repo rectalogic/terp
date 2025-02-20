@@ -1,16 +1,16 @@
 use bevy::{
+    DefaultPlugins,
     app::App,
     prelude::*,
     winit::{WakeUp, WinitPlugin},
-    DefaultPlugins,
 };
 
 #[cfg(target_arch = "wasm32")]
 use crate::webgpu;
 use crate::{
-    animation, camera, cli, draw, points,
+    AppState, animation, camera, cli, draw, points,
     project::{self, LoadProjectData},
-    ui, AppState,
+    ui,
 };
 
 pub enum AppPlugin {

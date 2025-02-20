@@ -4,7 +4,7 @@ use bevy::{
     render::{camera::Viewport, view::RenderLayers},
 };
 
-use crate::{ui::CameraLayout, Interpolated};
+use crate::{Interpolated, ui::CameraLayout};
 
 pub(crate) const SOURCE_LAYER: RenderLayers = RenderLayers::layer(1);
 pub(crate) const TARGET_LAYER: RenderLayers = RenderLayers::layer(2);

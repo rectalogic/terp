@@ -22,6 +22,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Install
         run: |
+          rustup update stable
           rustup target install wasm32-unknown-unknown
           cargo install wasm-pack
       - name: Setup Pages

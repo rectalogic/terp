@@ -3,7 +3,7 @@
 Interpolated drawing app, using [Bevy](https://bevyengine.org/)
 
 
-https://github.com/user-attachments/assets/d92ff8f7-669b-4b6f-b296-8fbe804c5b88
+https://github.com/user-attachments/assets/8557c65c-68b7-4801-8cb2-3e46f2c7f612
 
 
 ## Controls
